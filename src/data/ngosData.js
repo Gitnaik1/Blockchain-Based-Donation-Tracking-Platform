@@ -1,0 +1,53 @@
+export const initialNgos = [
+  {
+    id: "ngo-1",
+    name: "Green Canopy Initiative",
+    category: "Environment",
+    shortDescription: "Deploying decentralized carbon-offset tracking and real-time reforestation monitoring across Brazil.",
+    fullDescription: "Green Canopy Initiative connects global micro-donors with direct reforestation stewards in the Amazon Basin. Utilizing Polygon smart contracts, satellite imagery data is cryptographically hashed to release funds strictly when measurable tree canopy gains are confirmed.",
+    image: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80",
+    raised: 142500,
+    goal: 200000,
+    donorsCount: 1240,
+    contractAddress: "0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7",
+    verifiedWallet: "0x3f5CE5FBFe3E9af3971dD833D26bA9b5C936f0bE",
+    projectsCompleted: 14,
+    ipfsAuditReport: "QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco",
+    status: "Active & Verified",
+    recentUtilization: "Q3 2026 Drone Re-seeding in Acre State ($32,000 deployed)"
+  },
+  {
+    id: "ngo-2",
+    name: "Hope Horizon Schools",
+    category: "Education",
+    shortDescription: "Providing decentralized digital curriculum and direct micro-scholarship fund payouts for remote students.",
+    fullDescription: "Hope Horizon empowers vulnerable and underserved students across 12 countries by deploying tamper-proof educational records and direct automated cryptographic scholar allowances straight to verified guardian digital identity wallets.",
+    image: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80",
+    raised: 98300,
+    goal: 120000,
+    donorsCount: 912,
+    contractAddress: "0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB",
+    verifiedWallet: "0x2bE48f5C8eB2d8c32A91D65b7A48E4424A3521b7",
+    projectsCompleted: 28,
+    ipfsAuditReport: "QmZtmD2qt8STTujv7L9t7NnNV6K8L5YjP7Jv8gKz2f9T1R",
+    status: "Active & Verified",
+    recentUtilization: "Solar Satellite Uplinks for 5 Andean Elementary Schools ($18,500 deployed)"
+  },
+  {
+    id: "ngo-3",
+    name: "CleanWater Labs",
+    category: "Healthcare",
+    shortDescription: "Constructing blockchain-audited solar water filtration systems in rural Sub-Saharan areas.",
+    fullDescription: "CleanWater Labs deploys IoT-connected solar water purification systems. Every liter purified is recorded via cryptographic telemetry, enabling donors to verify that water flow thresholds are met prior to contract milestone disbursements.",
+    image: "https://images.unsplash.com/photo-1541252260730-0412e8e2108e?auto=format&fit=crop&w=800&q=80",
+    raised: 187000,
+    goal: 250000,
+    donorsCount: 2045,
+    contractAddress: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+    verifiedWallet: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+    projectsCompleted: 39,
+    ipfsAuditReport: "QmbWqxBEKC3P8tTXBSFL1ZZBodj125JYf4txJS4UCE2ndC",
+    status: "Active & Verified",
+    recentUtilization: "Deep Aquifer Reverse-Osmosis Array in Turkana Basin ($45,000 deployed)"
+  }
+];
