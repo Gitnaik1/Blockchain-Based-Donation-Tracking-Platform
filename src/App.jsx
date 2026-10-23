@@ -17,6 +17,7 @@ import { NgoDetailsModal } from "./components/NgoDetailsModal";
 import { NgoDashboard } from "./components/ngo-portal/NgoDashboard";
 import { LoginPage } from "./components/auth/LoginPage.jsx";
 import { SignupPage } from "./components/auth/SignupPage.jsx";
+import { PublicReceiptView } from "./components/common/PublicReceiptView.jsx";
 import { NotFoundPage } from "./components/common/NotFoundPage.jsx";
 import { ProtectedRoute } from "./components/common/ProtectedRoute.jsx";
 import { donationService } from "./services/donationService";
@@ -42,7 +43,7 @@ export function AppContent() {
     else if (currentPath === "/auditor") setNgoDashboardTab("Auditor");
     else if (currentPath === "/finance") setNgoDashboardTab("Finance");
     else if (currentPath === "/projects") setNgoDashboardTab("Projects");
-    else if (currentPath === "/donor/dashboard") setNgoDashboardTab("Donor Portal");
+    else if (currentPath.startsWith("/donor")) setNgoDashboardTab("Donor Portal");
     else if (currentPath === "/approvals") setNgoDashboardTab("Approvals");
     else if (currentPath === "/risk") setNgoDashboardTab("Risk Alerts");
     else if (currentPath === "/analytics") setNgoDashboardTab("Analytics");
@@ -139,7 +140,11 @@ export function AppContent() {
     }
 
     // 2. Authentication Pages
-    if (currentPath === "/login" || currentPath === "/ngo-login") {
+    if (
+      currentPath === "/login" ||
+      currentPath === "/donor/login" ||
+      currentPath === "/ngo-login"
+    ) {
       return (
         <LoginPage
           onLoginSuccess={(session) => {
@@ -154,11 +159,20 @@ export function AppContent() {
       );
     }
 
-    if (currentPath === "/signup") {
+    if (currentPath === "/signup" || currentPath === "/donor/signup") {
       return <SignupPage />;
     }
 
-    // 3. NGO Main Dashboard & Workspaces
+    // 3. Public Verification & Receipts
+    if (
+      currentPath === "/receipts" ||
+      currentPath === "/receipt" ||
+      currentPath.startsWith("/receipt/")
+    ) {
+      return <PublicReceiptView onOpenDonate={() => handleOpenDonate()} />;
+    }
+
+    // 4. NGO Main Dashboard & Workspaces
     if (currentPath === "/ngo/dashboard" || currentPath.startsWith("/ngo/")) {
       return (
         <ProtectedRoute
@@ -272,7 +286,19 @@ export function AppContent() {
       );
     }
 
-    if (currentPath === "/donor/dashboard") {
+    if (
+      currentPath === "/donor/dashboard" ||
+      currentPath === "/donor/donations" ||
+      currentPath === "/donor/profile" ||
+      currentPath === "/donor/settings"
+    ) {
+      const donorTab =
+        currentPath === "/donor/profile"
+          ? "profile"
+          : currentPath === "/donor/settings"
+          ? "settings"
+          : "history";
+
       return (
         <ProtectedRoute
           requiredRoles={[ROLES.DONOR, ROLES.NGO_ADMIN, ROLES.SUPER_ADMIN]}
@@ -286,6 +312,7 @@ export function AppContent() {
             ngoDonations={ngoDonations}
             onOpenDonate={() => handleOpenDonate()}
             initialTab="Donor Portal"
+            donorInitialTab={donorTab}
             onTabChange={setNgoDashboardTab}
           />
         </ProtectedRoute>

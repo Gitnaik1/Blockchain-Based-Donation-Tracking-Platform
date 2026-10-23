@@ -13,6 +13,8 @@ import {
   Loader2,
   Home,
   UserCheck,
+  Heart,
+  Sparkles,
 } from "lucide-react";
 import { useRouter } from "../../context/RouterContext.jsx";
 import { useWeb3 } from "../../context/Web3Context";
@@ -21,8 +23,9 @@ import { authService } from "../../services/authService";
 import { BackButton } from "../common/BackButton.jsx";
 import { DEMO_PROFILES, ROLES } from "../../config/roles.js";
 
-export const LoginPage = ({ onLoginSuccess }) => {
-  const { navigate, queryParams } = useRouter();
+export const LoginPage = ({ onLoginSuccess, isDonorOnly = false }) => {
+  const { navigate, queryParams, currentPath } = useRouter();
+  const isDonorContext = isDonorOnly || currentPath.includes("/donor") || queryParams.get("role") === "donor";
   const {
     account,
     formattedAccount,
@@ -35,7 +38,7 @@ export const LoginPage = ({ onLoginSuccess }) => {
   const { loginWithWallet, loginWithCredentials } = useAuth();
 
   const isSessionExpired = queryParams.get("expired") === "true";
-  const returnUrl = queryParams.get("returnUrl") || null;
+  const returnUrl = queryParams.get("returnUrl") || (isDonorContext ? "/donor/dashboard" : null);
 
   // Active Login Mode: 'wallet' | 'credentials'
   const [activeTab, setActiveTab] = useState("wallet");
@@ -209,14 +212,37 @@ export const LoginPage = ({ onLoginSuccess }) => {
           {/* Header */}
           <div className="flex flex-col gap-1 text-center">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#1D5FD0] font-mono">
-              Secure Web3 & Enterprise Authentication
+              {isDonorContext ? "Donor Access Portal" : "Secure Web3 & Enterprise Authentication"}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold font-outfit text-[#071B3B]">
-              Welcome Back
+              {isDonorContext ? "Donor Sign In" : "Welcome Back"}
             </h1>
             <p className="text-xs text-[#64748B]">
-              Sign in to manage donations, verify disbursements, or access NGO governance.
+              {isDonorContext
+                ? "Sign in to access your personal contribution history, 80G tax certificates, and impact milestones."
+                : "Sign in to manage donations, verify disbursements, or access NGO governance."}
             </p>
+          </div>
+
+          {/* Guest Donation Instant Action Banner */}
+          <div className="p-3.5 bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border border-emerald-200 rounded-2xl flex items-center justify-between gap-3 text-left shadow-sm">
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1.5 text-emerald-900 font-bold text-xs">
+                <Heart className="w-3.5 h-3.5 fill-[#00C9A7] text-[#00C9A7]" />
+                <span>Donate Without Logging In</span>
+              </div>
+              <p className="text-[11px] text-emerald-700 leading-tight">
+                No account or signup required. Complete an ordinary on-chain donation as a guest.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/#ngos")}
+              className="flex-shrink-0 px-3 py-1.5 bg-[#00C9A7] hover:bg-[#00B796] active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1"
+            >
+              <span>Donate Now</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
           </div>
 
           {/* Session Expired Banner if triggered */}
@@ -393,16 +419,26 @@ export const LoginPage = ({ onLoginSuccess }) => {
                   <span className="text-[11px] font-semibold text-[#64748B]">
                     Fast Demo Fill (Phase 2):
                   </span>
-                  <span className="text-[10px] text-slate-400">Click to fill</span>
+                  <span className="text-[10px] text-slate-400">Click to fill credentials</span>
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {DEMO_PROFILES.slice(0, 4).map((p) => (
+                  {/* Prioritize Donor profile first if in donor context */}
+                  {[
+                    DEMO_PROFILES.find((p) => p.role === ROLES.DONOR) || DEMO_PROFILES[5],
+                    DEMO_PROFILES[1], // NGO Admin
+                    DEMO_PROFILES[0], // Super Admin
+                    DEMO_PROFILES[2], // Finance
+                  ].map((p) => (
                     <button
                       type="button"
                       key={p.id}
                       onClick={() => handleQuickDemoSelect(p)}
-                      className="p-1.5 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-lg text-left text-[11px] text-[#334155] truncate transition-colors cursor-pointer"
-                      title={p.role}
+                      className={`p-1.5 border rounded-lg text-left text-[11px] truncate transition-colors cursor-pointer ${
+                        p.role === ROLES.DONOR
+                          ? "bg-emerald-50/70 border-emerald-200 text-emerald-900 font-bold"
+                          : "bg-slate-50 hover:bg-blue-50 border-slate-200 hover:border-blue-200 text-[#334155]"
+                      }`}
+                      title={`${p.name} (${p.role})`}
                     >
                       <div className="font-semibold truncate">{p.name}</div>
                       <div className="text-[10px] text-slate-500 truncate">{p.role}</div>
@@ -414,14 +450,25 @@ export const LoginPage = ({ onLoginSuccess }) => {
           )}
 
           {/* Footer Navigation */}
-          <div className="text-center pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-[#64748B]">
-            <span>Are you a registered NGO?</span>
-            <button
-              onClick={() => navigate("/signup?tab=ngo")}
-              className="text-[#1D5FD0] font-semibold hover:underline cursor-pointer"
-            >
-              Register Organization
-            </button>
+          <div className="text-center pt-2 border-t border-slate-100 flex flex-col gap-2 text-xs text-[#64748B]">
+            <div className="flex items-center justify-center gap-1.5">
+              <span>New donor?</span>
+              <button
+                onClick={() => navigate("/signup?tab=donor")}
+                className="text-[#1D5FD0] font-semibold hover:underline cursor-pointer"
+              >
+                Create Donor Account
+              </button>
+            </div>
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
+              <span>Are you a non-profit representative?</span>
+              <button
+                onClick={() => navigate("/signup?tab=ngo")}
+                className="text-[#071B3B] font-semibold hover:underline cursor-pointer"
+              >
+                Register NGO
+              </button>
+            </div>
           </div>
         </div>
       </main>
