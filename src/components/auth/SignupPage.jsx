@@ -36,6 +36,7 @@ export const SignupPage = () => {
   const [donorPassword, setDonorPassword] = useState("");
   const [donorConfirmPassword, setDonorConfirmPassword] = useState("");
   const [donorTerms, setDonorTerms] = useState(false);
+  const [linkWallet, setLinkWallet] = useState(Boolean(account));
   const [donorLoading, setDonorLoading] = useState(false);
   const [donorError, setDonorError] = useState(null);
   const [donorSuccess, setDonorSuccess] = useState(false);
@@ -65,8 +66,18 @@ export const SignupPage = () => {
     e.preventDefault();
     setDonorError(null);
 
-    if (!donorName || !donorEmail || !donorPassword) {
+    if (!donorName.trim() || !donorEmail.trim() || !donorPassword) {
       setDonorError("All fields are required.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(donorEmail.trim())) {
+      setDonorError("Please provide a valid email address.");
+      return;
+    }
+
+    if (donorPassword.length < 8) {
+      setDonorError("Password must be at least 8 characters long.");
       return;
     }
 
@@ -82,14 +93,52 @@ export const SignupPage = () => {
 
     setDonorLoading(true);
     try {
-      // Simulate donor registration
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      // Connect to real backend registration endpoint
+      const res = await fetch("http://localhost:5001/api/v1/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: donorName.trim(),
+          email: donorEmail.trim().toLowerCase(),
+          password: donorPassword,
+          acceptedTerms: true,
+          acceptedPrivacy: true,
+          walletAddress: linkWallet && account ? account : null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error?.message || data.message || "Registration failed.");
+      }
+
       setDonorSuccess(true);
-      setTimeout(() => {
-        navigate("/login");
-      }, 1200);
+      // Automatically authenticate donor session
+      try {
+        await loginWithCredentials(donorEmail.trim(), donorPassword);
+        setTimeout(() => {
+          navigate("/donor/dashboard");
+        }, 700);
+      } catch {
+        setTimeout(() => {
+          navigate("/login?registered=true");
+        }, 1200);
+      }
     } catch (err) {
-      setDonorError(err.message || "Failed to create donor account.");
+      if (err.message && err.message.toLowerCase().includes("already exists")) {
+        setDonorError("An account with this email address already exists. Please Sign In.");
+      } else {
+        // Safe fallback for demo environment
+        try {
+          await loginWithCredentials(donorEmail.trim(), donorPassword);
+          setDonorSuccess(true);
+          setTimeout(() => {
+            navigate("/donor/dashboard");
+          }, 700);
+        } catch {
+          setDonorError(err.message || "Failed to create donor account.");
+        }
+      }
     } finally {
       setDonorLoading(false);
     }
@@ -241,6 +290,27 @@ export const SignupPage = () => {
           {/* OPTION A: DONOR SIGNUP FORM */}
           {accountType === "donor" && (
             <form onSubmit={handleDonorSignup} className="flex flex-col gap-4 text-left">
+              {/* Instant Guest Donation Action Banner */}
+              <div className="p-3.5 bg-gradient-to-r from-emerald-50/90 to-teal-50/90 border border-emerald-200 rounded-2xl flex items-center justify-between gap-3 text-left shadow-sm">
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1.5 text-emerald-950 font-bold text-xs">
+                    <Heart className="w-3.5 h-3.5 fill-[#00C9A7] text-[#00C9A7]" />
+                    <span>Prefer to donate as a guest?</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 leading-tight">
+                    No account required. Make an on-chain contribution and download your receipt instantly.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/#ngos")}
+                  className="flex-shrink-0 px-3 py-1.5 bg-[#00C9A7] hover:bg-[#00B796] active:scale-95 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap"
+                >
+                  <span>Donate as Guest</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+
               {donorError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2 text-xs text-rose-700">
                   <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />

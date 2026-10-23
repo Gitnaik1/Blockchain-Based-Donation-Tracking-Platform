@@ -2,10 +2,34 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db/database.cjs");
 const addressRegistry = require("../contractsConfig.cjs");
+const { createRateLimiter } = require("../middleware/rateLimiter.cjs");
 
-router.get("/transactions/:txHash", (req, res) => {
+// Rate limit public transaction and receipt inspections (120 req/min)
+const lookupLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 120,
+  message: "Too many receipt lookup queries. Please wait a moment before trying again.",
+});
+
+/**
+ * Helper to fetch verified donation record by txHash, receiptNo, or id.
+ */
+function findDonationRecord(identifier) {
+  if (!identifier) return null;
+  const clean = identifier.trim();
+  return db.prepare(`
+    SELECT d.*, n.name AS ngo_name, n.category AS ngo_category, n.contract_address AS ngo_contract
+    FROM donations d
+    JOIN ngos n ON d.ngo_id = n.id
+    WHERE LOWER(d.tx_hash) = LOWER(?)
+       OR LOWER(d.tax_receipt_no) = LOWER(?)
+       OR LOWER(d.id) = LOWER(?)
+  `).get(clean, clean, clean);
+}
+
+router.get("/transactions/:txHash", lookupLimiter, (req, res) => {
   const { txHash } = req.params;
-  const donation = db.prepare("SELECT d.*, n.name AS ngo_name, n.contract_address AS ngo_contract FROM donations d JOIN ngos n ON d.ngo_id = n.id WHERE LOWER(d.tx_hash) = LOWER(?)").get(txHash);
+  const donation = findDonationRecord(txHash);
 
   if (donation) {
     return res.json({
@@ -21,7 +45,7 @@ router.get("/transactions/:txHash", (req, res) => {
         timestamp: donation.created_at,
         initiator: {
           wallet: donation.donor_address,
-          name: donation.donor_name || "Patron",
+          name: donation.donor_name || "Anonymous Patron",
           type: "DONOR_WALLET",
         },
         validator: {
@@ -29,16 +53,18 @@ router.get("/transactions/:txHash", (req, res) => {
           gasUsed: "0.00042 POL",
         },
         smartVault: {
-          address: addressRegistry.contracts?.TrustDonateTreasury || "0x71F39082Bc45199201aDeF80B91244019aA2C81B",
+          address: donation.ngo_contract || addressRegistry.contracts?.TrustDonateTreasury || "0x71F39082Bc45199201aDeF80B91244019aA2C81B",
           status: "ESCROW_LOCKED",
         },
         beneficiary: {
           ngoId: donation.ngo_id,
           ngoName: donation.ngo_name,
+          category: donation.ngo_category,
         },
         settlement: {
           amountFormatted: donation.amount_formatted,
           amountInr: donation.inr_equivalent,
+          tokenSymbol: donation.token_symbol,
           taxReceiptNo: donation.tax_receipt_no,
         },
         calldata: {
@@ -80,6 +106,58 @@ router.get("/transactions/:txHash", (req, res) => {
         status: "AUDIT_VERIFIED",
         gatewayUrl: "https://ipfs.io/ipfs/QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco",
       },
+    },
+  });
+});
+
+/**
+ * GET /api/v1/receipts/:receiptOrTxHash
+ * Public endpoint to look up an on-chain 80G donation receipt by transaction hash or receipt number.
+ */
+router.get("/receipts/:identifier", lookupLimiter, (req, res) => {
+  const { identifier } = req.params;
+  const donation = findDonationRecord(identifier);
+
+  if (!donation) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        code: "RECEIPT_NOT_FOUND",
+        message: `No verified donation receipt found for identifier '${identifier}'.`,
+      },
+    });
+  }
+
+  res.json({
+    success: true,
+    data: {
+      receiptNo: donation.tax_receipt_no,
+      txHash: donation.tx_hash,
+      blockNumber: donation.block_number || 12489325,
+      network: "Polygon Amoy Testnet",
+      chainId: donation.chain_id || 80002,
+      timestamp: donation.created_at,
+      ngo: {
+        id: donation.ngo_id,
+        name: donation.ngo_name,
+        category: donation.ngo_category,
+        contractAddress: donation.ngo_contract || addressRegistry.contracts?.TrustDonateTreasury,
+      },
+      donor: {
+        wallet: donation.donor_address,
+        isGuest: !donation.donor_name || donation.donor_name === "Patron",
+      },
+      financials: {
+        amountFormatted: donation.amount_formatted,
+        token: donation.token_symbol,
+        amountInr: donation.inr_equivalent,
+      },
+      compliance: {
+        section80GEligible: true,
+        jurisdiction: "Republic of India (Income Tax Act 1961)",
+        status: "ISSUED_AND_CONFIRMED",
+      },
+      explorerUrl: `https://amoy.polygonscan.com/tx/${donation.tx_hash}`,
     },
   });
 });

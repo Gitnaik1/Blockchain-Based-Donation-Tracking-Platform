@@ -15,6 +15,8 @@ import {
   ChevronDown,
   LayoutDashboard,
   Settings,
+  Heart,
+  Receipt,
 } from "lucide-react";
 import { useWeb3 } from "../context/Web3Context";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -177,6 +179,30 @@ export const Header = ({ onOpenDonate, onNavigateToNgoPortal }) => {
           {/* Unauthenticated Visitor Entry Points */}
           {!isAuthenticated ? (
             <div className="flex items-center gap-2">
+              {/* Quick Explore NGOs */}
+              <button
+                onClick={() => {
+                  if (currentPath !== "/") {
+                    navigate("/#ngos");
+                  } else {
+                    document.getElementById("ngos")?.scrollIntoView({ behavior: "smooth" });
+                  }
+                }}
+                className="hidden lg:inline-flex px-3 py-2 text-xs font-inter font-medium text-[#475569] hover:text-[#071B3B] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              >
+                Explore NGOs
+              </button>
+
+              {/* Guest Donation CTA */}
+              <button
+                onClick={onOpenDonate}
+                className="px-3.5 py-2 text-xs font-inter font-bold bg-[#00C9A7] hover:bg-[#00B796] active:scale-[0.98] text-white rounded-lg flex items-center gap-1.5 shadow-sm shadow-[#00C9A7]/20 transition-all cursor-pointer"
+                title="Make an immediate on-chain donation without account creation"
+              >
+                <Heart className="w-3.5 h-3.5 fill-white" />
+                <span>Donate Now</span>
+              </button>
+
               <button
                 onClick={() => navigate("/login")}
                 className="px-3.5 py-2 text-xs font-inter font-semibold text-[#1E3A8A] hover:bg-slate-100 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer border border-transparent hover:border-slate-200"
@@ -284,6 +310,42 @@ export const Header = ({ onOpenDonate, onNavigateToNgoPortal }) => {
                         <span>Go to {portalInfo.label}</span>
                       </button>
 
+                      {/* Direct Donor Workspace Shortcuts */}
+                      {activeRole === ROLES.DONOR && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setAccountDropdownOpen(false);
+                              navigate("/donor/donations");
+                            }}
+                            className="flex items-center gap-2 w-full p-2 hover:bg-slate-50 rounded-lg text-left text-[#071B3B] transition-colors cursor-pointer font-medium"
+                          >
+                            <Receipt className="w-3.5 h-3.5 text-slate-500" />
+                            <span>My Verified Donations</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setAccountDropdownOpen(false);
+                              navigate("/donor/profile");
+                            }}
+                            className="flex items-center gap-2 w-full p-2 hover:bg-slate-50 rounded-lg text-left text-[#071B3B] transition-colors cursor-pointer font-medium"
+                          >
+                            <User className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Donor Profile &amp; Wallet</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setAccountDropdownOpen(false);
+                              navigate("/donor/settings");
+                            }}
+                            className="flex items-center gap-2 w-full p-2 hover:bg-slate-50 rounded-lg text-left text-[#071B3B] transition-colors cursor-pointer font-medium"
+                          >
+                            <Settings className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Tax &amp; Notification Settings</span>
+                          </button>
+                        </>
+                      )}
+
                       {/* Organization switcher if user belongs to multiple NGOs */}
                       {organizations.length > 1 && (
                         <div className="pt-1 flex flex-col gap-1">
@@ -379,29 +441,54 @@ export const Header = ({ onOpenDonate, onNavigateToNgoPortal }) => {
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    navigate("/login");
+                    onOpenDonate();
                   }}
-                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-[#071B3B] rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-[#00C9A7] hover:bg-[#00B796] text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
-                  <LogIn className="w-4 h-4" />
-                  <span>Login</span>
+                  <Heart className="w-4 h-4 fill-white" />
+                  <span>Donate Now (Guest)</span>
                 </button>
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    navigate("/signup");
+                    if (currentPath !== "/") {
+                      navigate("/#ngos");
+                    } else {
+                      document.getElementById("ngos")?.scrollIntoView({ behavior: "smooth" });
+                    }
                   }}
-                  className="w-full py-2.5 bg-[#1D5FD0] text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+                  className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-[#071B3B] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <UserPlus className="w-4 h-4" />
-                  <span>Sign Up</span>
+                  <span>Explore NGOs</span>
                 </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate("/login");
+                    }}
+                    className="w-full py-2.5 bg-white border border-slate-200 text-[#1E3A8A] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Login</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate("/signup");
+                    }}
+                    className="w-full py-2.5 bg-[#1D5FD0] text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>Sign Up</span>
+                  </button>
+                </div>
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
                     connectWallet();
                   }}
-                  className="w-full py-2.5 bg-[#071B3B] text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-[#071B3B] text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Wallet className="w-4 h-4" />
                   <span>{account ? formattedAccount : "Connect Wallet"}</span>

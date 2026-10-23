@@ -63,6 +63,7 @@ export const NgoDashboard = ({
   ngoDonations = [],
   onOpenDonate,
   initialTab = "Dashboard",
+  donorInitialTab = "history",
   onTabChange,
 }) => {
   const { account } = useWeb3();
@@ -445,7 +446,7 @@ export const NgoDashboard = ({
           ) : activeTab === "Notifications" ? (
             <NotificationCenter onNavigateTab={handleTabChange} />
           ) : activeTab === "Donor Portal" ? (
-            <DonorDashboard />
+            <DonorDashboard onOpenDonate={onOpenDonate} initialTab={donorInitialTab} />
           ) : activeTab === "Fund Allocation" ? (
             <FundAllocation onBackToDashboard={() => handleTabChange("Dashboard")} />
           ) : activeTab === "Projects" ? (

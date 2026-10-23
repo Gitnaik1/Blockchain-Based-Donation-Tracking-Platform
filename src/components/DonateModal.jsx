@@ -10,9 +10,14 @@ import {
   FileText,
   Download,
   RefreshCw,
+  Sparkles,
+  Receipt,
+  UserPlus,
+  LogIn,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { useWeb3 } from "../context/Web3Context";
+import { useRouter } from "../context/RouterContext.jsx";
 import { web3Service } from "../services/web3Service";
 import { reportsService } from "../services/reportsService";
 import { SUPPORTED_TOKENS, SUPPORTED_NETWORKS, AMOY_CHAIN_ID_DEC } from "../config";
@@ -33,6 +38,8 @@ export const DonateModal = ({
     connectWallet,
     switchOrAddAmoyNetwork,
   } = useWeb3();
+
+  const { navigate } = useRouter();
 
   const [activeNgoId, setActiveNgoId] = useState(selectedNgo?.id || ngos[0]?.id);
   const [token, setToken] = useState("USDC");
@@ -111,10 +118,13 @@ export const DonateModal = ({
 
       // Short delay for on-chain block mining simulation / confirmation
       setTimeout(() => {
+        const generatedTaxReceipt = `REC-AMOY-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
         const newTx = {
           id: `tx-${Date.now()}`,
           ngoId: currentNgo.id,
           ngoName: currentNgo.name,
+          category: currentNgo.category,
+          contractAddress: currentNgo.contractAddress,
           recipient: `Donation to ${currentNgo.name}`,
           hash: txResult.hash,
           shortHash: shortenTxHash(txResult.hash),
@@ -122,10 +132,14 @@ export const DonateModal = ({
           token: token,
           timeAgo: "Just now",
           timestamp: Date.now(),
+          blockNumber: 12489325,
+          network: "Polygon Amoy Testnet",
+          taxReceiptNo: generatedTaxReceipt,
           status: "Confirmed",
           donor: activeAccount ? shortenAddress(activeAccount) : "0x7a8c...89F1",
           fullWallet: activeAccount || "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1",
           isSimulated: txResult.isSimulated,
+          isGuest: true,
         };
 
         if (onDonationComplete) {
@@ -160,7 +174,7 @@ export const DonateModal = ({
       amountInr: estimatedInr,
       amountCrypto: `${successTx.amount} ${successTx.token}`,
       date: new Date().toLocaleString("en-IN"),
-      taxReceiptNo: `REC-AMOY-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      taxReceiptNo: successTx.taxReceiptNo || `REC-AMOY-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
     };
     const html = reportsService.generateReceiptHtml(donationData);
     const blob = new Blob([html], { type: "text/html" });
@@ -188,7 +202,7 @@ export const DonateModal = ({
       aria-modal="true"
       aria-labelledby="donate-modal-title"
     >
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8F0] relative overflow-hidden">
+      <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8F0] relative overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={handleResetAndClose}
@@ -200,33 +214,44 @@ export const DonateModal = ({
 
         {/* STEP 1: SUCCESS CONFIRMATION */}
         {modalStep === "success" && successTx ? (
-          <div className="flex flex-col items-center text-center gap-5 py-4 animate-in zoom-in-95">
-            <div className="w-16 h-16 bg-[#D1FAE5] rounded-full flex items-center justify-center text-[#10B981] shadow-inner">
-              <CheckCircle2 className="w-10 h-10 stroke-[2.5]" />
+          <div className="flex flex-col items-center text-center gap-4 py-2 animate-in zoom-in-95">
+            <div className="w-14 h-14 bg-[#D1FAE5] rounded-full flex items-center justify-center text-[#10B981] shadow-inner">
+              <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
             </div>
 
             <div className="flex flex-col gap-1">
               <span className="text-[#10B981] text-xs font-inter font-bold uppercase tracking-wider">
-                Cryptographic Evidence Verified
+                Cryptographic Evidence Verified • Guest Contribution
               </span>
               <h3 id="donate-modal-title" className="text-2xl font-outfit font-extrabold text-[#0F172A]">
                 Donation Confirmed!
               </h3>
-              <p className="text-sm text-[#64748B] font-inter">
-                Your transaction has been successfully written to the Polygon Amoy blockchain ledger.
+              <p className="text-xs text-[#64748B] font-inter">
+                Your transaction has been mined and finalized on the Polygon Amoy blockchain ledger.
               </p>
             </div>
 
-            <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4 flex flex-col gap-2.5 text-left text-xs font-inter">
+            {/* Structured Evidence Card */}
+            <div className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-4 flex flex-col gap-2.5 text-left text-xs font-inter">
               <div className="flex justify-between items-center">
                 <span className="text-[#64748B]">NGO Beneficiary:</span>
-                <span className="font-semibold text-[#0F172A]">{currentNgo.name}</span>
+                <span className="font-bold text-[#0F172A]">{currentNgo.name}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-[#64748B]">Amount Settled:</span>
-                <span className="font-bold text-[#1E3A8A] text-sm">
+                <span className="font-bold text-[#1E3A8A]">
                   ${successTx.amount} {successTx.token} ({formatInr(estimatedInr)})
                 </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#64748B]">Tax Receipt No:</span>
+                <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                  {successTx.taxReceiptNo}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#64748B]">Network &amp; Block:</span>
+                <span className="text-[#0F172A]">Polygon Amoy • #{successTx.blockNumber || "12489325"}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-slate-200">
                 <span className="text-[#64748B]">Tx Hash:</span>
@@ -242,35 +267,66 @@ export const DonateModal = ({
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full mt-2">
+            {/* Public Blockchain Notice */}
+            <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+              Transactions and wallet addresses are publicly recorded on Polygon Amoy. No personal contact details are stored on-chain.
+            </p>
+
+            {/* Actions Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full pt-1">
               <button
                 onClick={handleDownloadReceipt}
-                className="w-full sm:flex-1 py-3 bg-blue-50 hover:bg-blue-100 text-[#1E3A8A] font-inter font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="py-2.5 bg-blue-50 hover:bg-blue-100 text-[#1E3A8A] font-inter font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Download Receipt</span>
+                <span>Download 80G Receipt</span>
               </button>
 
-              {onViewInLedger ? (
+              <button
+                onClick={() => {
+                  handleResetAndClose();
+                  navigate(`/receipt/${successTx.hash}`);
+                }}
+                className="py-2.5 bg-slate-100 hover:bg-slate-200 text-[#071B3B] font-inter font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>View Public Receipt</span>
+              </button>
+            </div>
+
+            {/* Step 14: Optional Account Creation / Linking */}
+            <div className="w-full p-3 bg-blue-50/60 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-2.5 text-left text-xs">
+              <div className="flex flex-col">
+                <span className="font-bold text-[#1E3A8A]">Save to Donor Portfolio</span>
+                <span className="text-[11px] text-slate-500">Track all your tax-exempt receipts in one place.</span>
+              </div>
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
                 <button
+                  type="button"
                   onClick={() => {
                     handleResetAndClose();
-                    onViewInLedger();
+                    navigate(`/signup?claimTx=${successTx.hash}`);
                   }}
-                  className="w-full sm:flex-1 py-3 bg-[#00C9A7] hover:bg-[#00B796] text-white font-inter font-bold rounded-lg text-xs shadow-md shadow-[#00C9A7]/20 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-2.5 py-1.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white rounded-lg font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1"
                 >
-                  <span>View in Ledger</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
+                  <UserPlus className="w-3 h-3" />
+                  <span>Create Account</span>
                 </button>
-              ) : (
-                <button
-                  onClick={handleResetAndClose}
-                  className="w-full sm:flex-1 py-3 bg-[#F1F5F9] hover:bg-slate-200 text-[#0F172A] font-inter font-semibold rounded-lg text-xs transition-colors cursor-pointer"
-                >
-                  Done
-                </button>
-              )}
+              </div>
             </div>
+
+            {onViewInLedger && (
+              <button
+                onClick={() => {
+                  handleResetAndClose();
+                  onViewInLedger();
+                }}
+                className="w-full py-2.5 bg-[#00C9A7] hover:bg-[#00B796] text-white font-inter font-bold rounded-xl text-xs shadow-md shadow-[#00C9A7]/20 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span>View in Live Ledger</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         ) : modalStep === "review" ? (
           /* STEP 2: REVIEW BEFORE SIGNING */
@@ -390,16 +446,26 @@ export const DonateModal = ({
         ) : (
           /* STEP 0: DONATION INPUT FORM */
           <form onSubmit={handleProceedToReview} className="flex flex-col gap-5">
-            <div className="flex items-center gap-2 text-[#2563EB]">
-              <ShieldCheck className="w-5 h-5" />
-              <span className="font-outfit font-bold text-sm uppercase tracking-wide">
-                Direct Smart Contract Transfer
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#2563EB]">
+                <ShieldCheck className="w-5 h-5" />
+                <span className="font-outfit font-bold text-sm uppercase tracking-wide">
+                  Direct Smart Contract Transfer
+                </span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wider font-mono">
+                Guest Mode
               </span>
             </div>
 
-            <h3 id="donate-modal-title" className="text-2xl font-outfit font-black text-[#0F172A]">
-              Make a Verified Contribution
-            </h3>
+            <div className="flex flex-col gap-0.5 text-left">
+              <h3 id="donate-modal-title" className="text-2xl font-outfit font-black text-[#0F172A]">
+                Make a Contribution
+              </h3>
+              <p className="text-xs text-[#64748B]">
+                No account or login required. Your donation is transferred directly via Polygon Amoy smart contract.
+              </p>
+            </div>
 
             {errorMessage && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
