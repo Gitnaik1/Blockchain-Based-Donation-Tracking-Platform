@@ -23,6 +23,7 @@ import {
   Filter,
 } from "lucide-react";
 import { useWeb3 } from "../../context/Web3Context";
+import { authService } from "../../services/authService";
 import { FundAllocation } from "./FundAllocation";
 import { NgoProjects } from "./NgoProjects";
 import { NgoDonations } from "./NgoDonations";
@@ -203,7 +204,10 @@ export const NgoDashboard = ({
               <span>Public Site</span>
             </button>
             <button
-              onClick={onLogout}
+              onClick={() => {
+                authService.clearSession();
+                onLogout();
+              }}
               className="flex items-center gap-1.5 hover:text-red-400 transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -300,9 +304,14 @@ export const NgoDashboard = ({
               <h1 className="text-2xl sm:text-[28px] font-outfit font-bold text-[#071B3B]">
                 Good morning, Priya
               </h1>
-              <p className="text-xs sm:text-[13px] text-[#66738A]">
-                Here’s how Asha Foundation is creating impact today.
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-xs sm:text-[13px] text-[#66738A]">
+                  Here’s how Asha Foundation is creating impact today.
+                </p>
+                <span className="text-[10px] bg-slate-100 text-[#64748B] px-2 py-0.5 rounded border border-slate-200">
+                  Documented baseline: 1 POL ≈ ₹100, 1 USDC/USDT ≈ ₹85
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center gap-2.5">

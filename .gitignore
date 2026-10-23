@@ -11,6 +11,16 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+
+# Hardhat Build Artifacts
+artifacts/
+cache/
+
+# Backend Local Data & Caches
+server/data/
+server/data/*.db
+server/data/*.bin
 
 # Editor directories and files
 .vscode/*
