@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Web3Provider } from "./context/Web3Context";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
+import { RouterProvider, useRouter } from "./context/RouterContext.jsx";
+import { ROLES, PERMISSIONS } from "./config/roles.js";
 import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
 import { StatsBand } from "./components/StatsBand";
@@ -11,16 +14,18 @@ import { AboutSection } from "./components/AboutSection";
 import { Footer } from "./components/Footer";
 import { DonateModal } from "./components/DonateModal";
 import { NgoDetailsModal } from "./components/NgoDetailsModal";
-import { NgoLogin } from "./components/ngo-portal/NgoLogin";
 import { NgoDashboard } from "./components/ngo-portal/NgoDashboard";
+import { LoginPage } from "./components/auth/LoginPage.jsx";
+import { SignupPage } from "./components/auth/SignupPage.jsx";
+import { NotFoundPage } from "./components/common/NotFoundPage.jsx";
+import { ProtectedRoute } from "./components/common/ProtectedRoute.jsx";
 import { donationService } from "./services/donationService";
-import { authService } from "./services/authService";
 
 export function AppContent() {
-  // Navigation view: 'public' | 'ngo-login' | 'ngo-dashboard'
-  const [currentView, setCurrentView] = useState("public");
-  const [ngoDashboardTab, setNgoDashboardTab] = useState("Dashboard");
+  const { currentPath, navigate } = useRouter();
+  const { logout } = useAuth();
 
+  const [ngoDashboardTab, setNgoDashboardTab] = useState("Dashboard");
   const [ngos, setNgos] = useState(() => donationService.getNgos());
   const [transactions, setTransactions] = useState(() => donationService.getTransactions());
   const [ngoDonations, setNgoDonations] = useState(() => donationService.getDonations());
@@ -31,19 +36,29 @@ export function AppContent() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedNgoForDetails, setSelectedNgoForDetails] = useState(null);
 
+  // Sync dashboard tab based on route
+  useEffect(() => {
+    if (currentPath === "/admin") setNgoDashboardTab("Super Admin");
+    else if (currentPath === "/auditor") setNgoDashboardTab("Auditor");
+    else if (currentPath === "/finance") setNgoDashboardTab("Finance");
+    else if (currentPath === "/projects") setNgoDashboardTab("Projects");
+    else if (currentPath === "/donor/dashboard") setNgoDashboardTab("Donor Portal");
+    else if (currentPath === "/approvals") setNgoDashboardTab("Approvals");
+    else if (currentPath === "/risk") setNgoDashboardTab("Risk Alerts");
+    else if (currentPath === "/analytics") setNgoDashboardTab("Analytics");
+    else if (currentPath === "/documents") setNgoDashboardTab("Documents");
+    else if (currentPath === "/ngo/dashboard") setNgoDashboardTab("Dashboard");
+  }, [currentPath]);
+
   // Subscribe to authoritative donation service updates
   useEffect(() => {
     const unsubscribe = donationService.subscribe((state) => {
-      setDonationsState(state);
+      if (state.ngos) setNgos(state.ngos);
+      if (state.transactions) setTransactions(state.transactions);
+      if (state.donations) setNgoDonations(state.donations);
     });
     return () => unsubscribe();
   }, []);
-
-  const setDonationsState = (state) => {
-    if (state.ngos) setNgos(state.ngos);
-    if (state.transactions) setTransactions(state.transactions);
-    if (state.donations) setNgoDonations(state.donations);
-  };
 
   const handleOpenDonate = (ngo = null) => {
     setSelectedNgoForDonate(ngo || ngos[0]);
@@ -57,16 +72,10 @@ export function AppContent() {
 
   const handleViewInLedger = () => {
     setNgoDashboardTab("Donations");
-    // Verify authentication before opening dashboard
-    if (authService.isAuthenticated()) {
-      setCurrentView("ngo-dashboard");
-    } else {
-      setCurrentView("ngo-login");
-    }
+    navigate("/ngo/dashboard");
   };
 
   const handleDonationComplete = (newTx, ngoId, amount) => {
-    // Add via authoritative donationService which handles deduplication, metrics, and persistence
     donationService.addDonation({
       txHash: newTx.hash,
       amount: amount,
@@ -86,72 +95,282 @@ export function AppContent() {
     }
   };
 
-  const handleNavigateToNgoPortal = () => {
-    if (authService.isAuthenticated()) {
-      setCurrentView("ngo-dashboard");
-    } else {
-      setCurrentView("ngo-login");
+  const handleNavigateToNgoPortal = (tab = "Dashboard") => {
+    if (tab && typeof tab === "string") {
+      setNgoDashboardTab(tab);
     }
+    if (tab === "Super Admin") navigate("/admin");
+    else if (tab === "Auditor") navigate("/auditor");
+    else if (tab === "Finance") navigate("/finance");
+    else if (tab === "Projects") navigate("/projects");
+    else if (tab === "Donor Portal") navigate("/donor/dashboard");
+    else navigate("/ngo/dashboard");
   };
 
-  return (
-    <>
-      {currentView === "ngo-login" ? (
-        <NgoLogin
-          onLoginSuccess={() => {
-            setNgoDashboardTab("Dashboard");
-            setCurrentView("ngo-dashboard");
-          }}
-          onBackToPublic={() => setCurrentView("public")}
-        />
-      ) : currentView === "ngo-dashboard" ? (
-        <NgoDashboard
-          onBackToPublic={() => setCurrentView("public")}
-          onLogout={() => {
-            authService.clearSession();
-            setCurrentView("ngo-login");
-          }}
-          ngoDonations={ngoDonations}
-          onOpenDonate={() => handleOpenDonate()}
-          initialTab={ngoDashboardTab}
-          onTabChange={setNgoDashboardTab}
-        />
-      ) : (
+  // Route Rendering
+  const renderCurrentRoute = () => {
+    // 1. Public Homepage
+    if (currentPath === "/" || currentPath === "/home" || currentPath === "") {
+      return (
         <div className="min-h-screen bg-white text-brand-navy flex flex-col font-inter">
-          {/* Navigation Header */}
           <Header
             onOpenDonate={() => handleOpenDonate()}
             onNavigateToNgoPortal={handleNavigateToNgoPortal}
           />
-
-          {/* Main Sections */}
           <main className="flex-1">
             <Hero
               onOpenDonate={() => handleOpenDonate()}
               onExploreClick={handleExploreClick}
             />
-
             <StatsBand />
-
             <HowItWorks />
-
             <FeaturedNgos
               ngos={ngos}
               onSelectNgo={handleOpenDetails}
               onDonateToNgo={(ngo) => handleOpenDonate(ngo)}
             />
-
             <LiveLedger transactions={transactions} />
-
             <TransparencySection />
-
             <AboutSection />
           </main>
-
-          {/* Global Footer */}
           <Footer />
         </div>
-      )}
+      );
+    }
+
+    // 2. Authentication Pages
+    if (currentPath === "/login" || currentPath === "/ngo-login") {
+      return (
+        <LoginPage
+          onLoginSuccess={(session) => {
+            if (session?.role === ROLES.SUPER_ADMIN) navigate("/admin");
+            else if (session?.role === ROLES.AUDITOR) navigate("/auditor");
+            else if (session?.role === ROLES.FINANCE_OFFICER) navigate("/finance");
+            else if (session?.role === ROLES.PROJECT_MANAGER) navigate("/projects");
+            else if (session?.role === ROLES.DONOR) navigate("/donor/dashboard");
+            else navigate("/ngo/dashboard");
+          }}
+        />
+      );
+    }
+
+    if (currentPath === "/signup") {
+      return <SignupPage />;
+    }
+
+    // 3. NGO Main Dashboard & Workspaces
+    if (currentPath === "/ngo/dashboard" || currentPath.startsWith("/ngo/")) {
+      return (
+        <ProtectedRoute
+          requiredRoles={[
+            ROLES.NGO_ADMIN,
+            ROLES.FINANCE_OFFICER,
+            ROLES.PROJECT_MANAGER,
+            ROLES.AUDITOR,
+            ROLES.SUPER_ADMIN,
+            ROLES.VIEWER,
+            ROLES.DONOR,
+          ]}
+        >
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab={ngoDashboardTab || "Dashboard"}
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    // 4. Role-Specific Direct Routes
+    if (currentPath === "/finance") {
+      return (
+        <ProtectedRoute
+          requiredRoles={[ROLES.FINANCE_OFFICER, ROLES.NGO_ADMIN, ROLES.SUPER_ADMIN]}
+          requiredPermission={PERMISSIONS.TREASURY_PROPOSE}
+        >
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Finance"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    if (currentPath === "/projects") {
+      return (
+        <ProtectedRoute
+          requiredRoles={[ROLES.PROJECT_MANAGER, ROLES.NGO_ADMIN, ROLES.SUPER_ADMIN]}
+          requiredPermission={PERMISSIONS.PROJECT_CREATE}
+        >
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Projects"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    if (currentPath === "/admin") {
+      return (
+        <ProtectedRoute
+          requiredRole={ROLES.SUPER_ADMIN}
+          requiredPermission={PERMISSIONS.PLATFORM_ADMIN}
+        >
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Super Admin"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    if (currentPath === "/auditor") {
+      return (
+        <ProtectedRoute
+          requiredRole={ROLES.AUDITOR}
+          requiredPermission={PERMISSIONS.AUDIT_REVIEW}
+        >
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Auditor"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    if (currentPath === "/donor/dashboard") {
+      return (
+        <ProtectedRoute
+          requiredRoles={[ROLES.DONOR, ROLES.NGO_ADMIN, ROLES.SUPER_ADMIN]}
+        >
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Donor Portal"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    if (currentPath === "/approvals") {
+      return (
+        <ProtectedRoute requiredPermission={PERMISSIONS.TREASURY_APPROVE}>
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Approvals"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    if (currentPath === "/risk") {
+      return (
+        <ProtectedRoute requiredPermission={PERMISSIONS.RISK_VIEW_ALERTS}>
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Risk Alerts"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    if (currentPath === "/analytics") {
+      return (
+        <ProtectedRoute requiredPermission={PERMISSIONS.DATA_EXPORT_CSV}>
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Analytics"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    if (currentPath === "/documents") {
+      return (
+        <ProtectedRoute>
+          <NgoDashboard
+            onBackToPublic={() => navigate("/")}
+            onLogout={() => {
+              logout();
+              navigate("/login");
+            }}
+            ngoDonations={ngoDonations}
+            onOpenDonate={() => handleOpenDonate()}
+            initialTab="Documents"
+            onTabChange={setNgoDashboardTab}
+          />
+        </ProtectedRoute>
+      );
+    }
+
+    // 5. Unrecognized path fallback
+    return <NotFoundPage />;
+  };
+
+  return (
+    <>
+      {renderCurrentRoute()}
 
       {/* Global Interactive Modals */}
       <DonateModal
@@ -176,7 +395,11 @@ export function AppContent() {
 export default function App() {
   return (
     <Web3Provider>
-      <AppContent />
+      <AuthProvider>
+        <RouterProvider>
+          <AppContent />
+        </RouterProvider>
+      </AuthProvider>
     </Web3Provider>
   );
 }

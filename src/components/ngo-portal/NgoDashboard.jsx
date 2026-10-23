@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   Heart,
@@ -21,9 +21,23 @@ import {
   X,
   ArrowUpRight,
   Filter,
+  ShieldCheck,
+  ShieldAlert,
+  FileText,
+  KeyRound,
+  Landmark,
+  Sparkles,
 } from "lucide-react";
 import { useWeb3 } from "../../context/Web3Context";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useRouter } from "../../context/RouterContext.jsx";
+import { ROLES, ROLE_LABELS, PERMISSIONS } from "../../config/roles.js";
 import { authService } from "../../services/authService";
+import { RoleSwitcherPill } from "../common/RoleSwitcherPill.jsx";
+import { ForbiddenView } from "../common/ForbiddenView.jsx";
+import { GlobalSearchModal } from "../common/GlobalSearchModal.jsx";
+import { BackButton } from "../common/BackButton.jsx";
+import { Breadcrumbs } from "../common/Breadcrumbs.jsx";
 import { FundAllocation } from "./FundAllocation";
 import { NgoProjects } from "./NgoProjects";
 import { NgoDonations } from "./NgoDonations";
@@ -31,6 +45,17 @@ import { NgoTransactions } from "./NgoTransactions";
 import { NgoImpactReports } from "./NgoImpactReports";
 import { NgoDonors } from "./NgoDonors";
 import { NgoSettings } from "./NgoSettings";
+import { NgoTeamManagement } from "./NgoTeamManagement.jsx";
+import { FinanceWorkspace } from "../finance/FinanceWorkspace.jsx";
+import { ApprovalCenter } from "../approvals/ApprovalCenter.jsx";
+import { ProjectManagerWorkspace } from "../projects/ProjectManagerWorkspace.jsx";
+import { AuditorPortal } from "../auditor/AuditorPortal.jsx";
+import { DonorDashboard } from "../donor/DonorDashboard.jsx";
+import { SuperAdminDashboard } from "../super-admin/SuperAdminDashboard.jsx";
+import { NotificationCenter } from "../notifications/NotificationCenter.jsx";
+import { AnalyticsDashboard } from "../analytics/AnalyticsDashboard.jsx";
+import { RiskAlertsWorkspace } from "../risk/RiskAlertsWorkspace.jsx";
+import { DocumentComplianceWorkspace } from "../documents/DocumentComplianceWorkspace.jsx";
 
 export const NgoDashboard = ({
   onBackToPublic,
@@ -41,12 +66,27 @@ export const NgoDashboard = ({
   onTabChange,
 }) => {
   const { account } = useWeb3();
+  const { currentUser, activeRole, activeOrganization, hasAccess } = useAuth();
+  const { navigate } = useRouter();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+  // Global keydown listener for ⌘K or Ctrl+K
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSearchModalOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Sync if initialTab changes from parent
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialTab) {
       setActiveTab(initialTab);
     }
@@ -56,6 +96,14 @@ export const NgoDashboard = ({
     setActiveTab(tab);
     if (onTabChange) {
       onTabChange(tab);
+    }
+    if (navigate) {
+      if (tab === "Super Admin") navigate("/admin");
+      else if (tab === "Auditor") navigate("/auditor");
+      else if (tab === "Finance") navigate("/finance");
+      else if (tab === "Projects") navigate("/projects");
+      else if (tab === "Donor Portal") navigate("/donor/dashboard");
+      else if (tab === "Dashboard") navigate("/ngo/dashboard");
     }
   };
 
@@ -89,12 +137,24 @@ export const NgoDashboard = ({
   };
 
   const navItems = [
+    ...(activeRole === ROLES.SUPER_ADMIN
+      ? [{ label: "Super Admin", icon: ShieldCheck, badge: "Gov" }]
+      : []),
     { label: "Dashboard", icon: LayoutDashboard },
-    { label: "Donations", icon: Heart },
+    { label: "Approvals", icon: KeyRound, badge: "Multi-Sig" },
+    { label: "Finance", icon: Landmark },
     { label: "Projects", icon: FolderKanban },
     { label: "Fund Allocation", icon: PieChart },
+    { label: "Team", icon: Users },
+    { label: "Documents", icon: FileText },
+    { label: "Auditor", icon: ShieldCheck },
+    { label: "Risk Alerts", icon: ShieldAlert },
+    { label: "Analytics", icon: BarChart3 },
+    { label: "Notifications", icon: Bell },
+    { label: "Donor Portal", icon: Heart },
+    { label: "Donations", icon: Heart },
     { label: "Transactions", icon: ArrowLeftRight },
-    { label: "Impact Reports", icon: BarChart3 },
+    { label: "Impact Reports", icon: FileCheck },
     { label: "Donors", icon: Users },
     { label: "Settings", icon: Settings },
   ];
@@ -141,7 +201,7 @@ export const NgoDashboard = ({
           </div>
 
           {/* Nav Items */}
-          <nav className="flex flex-col gap-1.5">
+          <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-270px)] pr-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.label;
@@ -153,7 +213,7 @@ export const NgoDashboard = ({
                     handleTabChange(item.label);
                     setMobileSidebarOpen(false);
                   }}
-                  className={`w-full h-11 px-3.5 rounded-xl flex items-center justify-between text-xs sm:text-[13px] font-medium transition-all ${
+                  className={`w-full h-10 px-3 rounded-xl flex items-center justify-between text-xs font-medium transition-all cursor-pointer ${
                     isActive
                       ? isFundTab
                         ? "bg-[#00C9A7]/20 text-[#00C9A7] font-bold border border-[#00C9A7]/30 shadow-sm"
@@ -161,9 +221,9 @@ export const NgoDashboard = ({
                       : "text-[#A9B7D0] hover:text-white hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5 truncate">
                     <Icon
-                      className={`w-[18px] h-[18px] ${
+                      className={`w-4 h-4 flex-shrink-0 ${
                         isActive
                           ? isFundTab
                             ? "text-[#00C9A7]"
@@ -171,11 +231,15 @@ export const NgoDashboard = ({
                           : "text-[#A9B7D0]"
                       }`}
                     />
-                    <span>{item.label}</span>
+                    <span className="truncate">{item.label}</span>
                   </div>
-                  {isFundTab && (
+                  {item.badge ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-[#00C9A7] font-mono font-bold">
+                      {item.badge}
+                    </span>
+                  ) : isFundTab ? (
                     <span className="w-2 h-2 rounded-full bg-[#00C9A7] animate-pulse"></span>
-                  )}
+                  ) : null}
                 </button>
               );
             })}
@@ -230,14 +294,16 @@ export const NgoDashboard = ({
               <Menu className="w-5 h-5" />
             </button>
 
-            <div className="w-full h-10 px-3.5 bg-[#F5F7FB] border border-transparent focus-within:border-[#1D5FD0] rounded-xl flex items-center gap-2 text-xs sm:text-[13px] text-[#94A0B4] transition-all">
+            <div
+              onClick={() => setIsSearchModalOpen(true)}
+              className="w-full h-10 px-3.5 bg-[#F5F7FB] border border-transparent hover:border-[#1D5FD0] focus-within:border-[#1D5FD0] rounded-xl flex items-center gap-2 text-xs sm:text-[13px] text-[#94A0B4] transition-all cursor-pointer"
+            >
               <Search className="w-4 h-4 flex-shrink-0 text-[#94A0B4]" />
               <input
                 type="text"
-                placeholder="Search donations, projects, transactions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-transparent border-none outline-none w-full text-[#10213F] placeholder-[#94A0B4] text-xs sm:text-[13px]"
+                readOnly
+                placeholder="Search workspaces, NGOs, projects (⌘K)..."
+                className="bg-transparent border-none outline-none w-full text-[#10213F] placeholder-[#94A0B4] text-xs sm:text-[13px] cursor-pointer"
               />
               <span className="hidden sm:inline px-1.5 py-0.5 bg-white border border-[#E2E7F0] rounded text-[10px] font-mono text-[#94A0B4]">
                 ⌘ K
@@ -246,15 +312,23 @@ export const NgoDashboard = ({
           </div>
 
           {/* Account Actions */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 flex-shrink-0">
+            {/* Role Switcher Pill */}
+            <RoleSwitcherPill />
+
             {/* Notification Bell */}
-            <div className="relative w-9 h-9 bg-[#F5F7FB] rounded-xl flex items-center justify-center text-[#10213F] hover:bg-slate-200 transition-colors cursor-pointer">
+            <div
+              onClick={() => handleTabChange("Notifications")}
+              className="relative w-9 h-9 bg-[#F5F7FB] rounded-xl flex items-center justify-center text-[#10213F] hover:bg-slate-200 transition-colors cursor-pointer"
+              title="Open Notifications & Task Center"
+            >
               <Bell className="w-4 h-4" />
+              <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-[#C13C4A] rounded-full animate-ping"></span>
               <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-[#C13C4A] rounded-full"></span>
             </div>
 
             {/* Wallet Pill */}
-            <div className="hidden sm:flex px-3 py-1.5 bg-[#E8F7F0] border border-[#C6EFE0] rounded-full items-center gap-1.5">
+            <div className="hidden lg:flex px-3 py-1.5 bg-[#E8F7F0] border border-[#C6EFE0] rounded-full items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-[#17875D]"></div>
               <span className="text-[#17875D] font-mono text-[11px] font-medium">
                 {displayWallet}
@@ -264,16 +338,16 @@ export const NgoDashboard = ({
             {/* NGO Avatar & Organization Profile */}
             <div className="flex items-center gap-2.5 pl-2 sm:border-l border-slate-200">
               <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-                alt="Dr. Alok Verma"
+                src={currentUser?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"}
+                alt={currentUser?.name || "User"}
                 className="w-9 h-9 rounded-full object-cover border border-[#00C9A7]"
               />
               <div className="hidden md:flex flex-col">
                 <span className="text-[#10213F] text-xs font-semibold font-inter leading-tight">
-                  Dr. Alok Verma
+                  {currentUser?.name || "Dr. Alok Verma"}
                 </span>
                 <span className="text-[#66738A] text-[10px] leading-tight">
-                  Director of Operations • Asha Foundation
+                  {ROLE_LABELS[activeRole]} • {activeOrganization?.name || "Platform"}
                 </span>
               </div>
             </div>
@@ -282,10 +356,104 @@ export const NgoDashboard = ({
 
         {/* Main Content Area */}
         <main className="p-6 sm:p-8 flex flex-col gap-6">
-          {activeTab === "Fund Allocation" ? (
+          {/* Breadcrumbs and Back Navigation Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
+            <div className="flex items-center gap-3">
+              <BackButton fallback="/ngo/dashboard" />
+              <Breadcrumbs
+                items={[
+                  { label: "NGO Workspace", path: "/ngo/dashboard" },
+                  ...(activeTab !== "Dashboard"
+                    ? [{ label: activeTab, active: true }]
+                    : [{ label: "Overview", active: true }]),
+                ]}
+              />
+            </div>
+            <button
+              onClick={onBackToPublic}
+              className="text-xs font-semibold text-[#1D5FD0] hover:text-[#1E3A8A] flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <span>Public Site</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {activeTab === "Super Admin" ? (
+            activeRole === ROLES.SUPER_ADMIN ? (
+              <SuperAdminDashboard />
+            ) : (
+              <ForbiddenView
+                requiredRole="Platform Super Admin"
+                currentRole={ROLE_LABELS[activeRole]}
+                onBack={() => handleTabChange("Dashboard")}
+              />
+            )
+          ) : activeTab === "Approvals" ? (
+            hasAccess(PERMISSIONS.TREASURY_APPROVE) ? (
+              <ApprovalCenter />
+            ) : (
+              <ForbiddenView
+                requiredPermission="Multi-Sig Treasury Approval Signer"
+                currentRole={ROLE_LABELS[activeRole]}
+                onBack={() => handleTabChange("Dashboard")}
+              />
+            )
+          ) : activeTab === "Finance" ? (
+            hasAccess(PERMISSIONS.TREASURY_PROPOSE) || hasAccess(PERMISSIONS.TREASURY_APPROVE) ? (
+              <FinanceWorkspace />
+            ) : (
+              <ForbiddenView
+                requiredPermission="Treasury Controls & Balancing"
+                currentRole={ROLE_LABELS[activeRole]}
+                onBack={() => handleTabChange("Dashboard")}
+              />
+            )
+          ) : activeTab === "Team" ? (
+            hasAccess(PERMISSIONS.NGO_MANAGE_TEAM) ? (
+              <NgoTeamManagement />
+            ) : (
+              <ForbiddenView
+                requiredPermission="NGO Team Management"
+                currentRole={ROLE_LABELS[activeRole]}
+                onBack={() => handleTabChange("Dashboard")}
+              />
+            )
+          ) : activeTab === "Auditor" ? (
+            hasAccess(PERMISSIONS.AUDIT_REVIEW) ? (
+              <AuditorPortal />
+            ) : (
+              <ForbiddenView
+                requiredPermission="Independent Audit Verification"
+                currentRole={ROLE_LABELS[activeRole]}
+                onBack={() => handleTabChange("Dashboard")}
+              />
+            )
+          ) : activeTab === "Risk Alerts" ? (
+            hasAccess(PERMISSIONS.RISK_VIEW_ALERTS) ? (
+              <RiskAlertsWorkspace />
+            ) : (
+              <ForbiddenView
+                requiredPermission="Risk Alerts & Anomaly Monitor"
+                currentRole={ROLE_LABELS[activeRole]}
+                onBack={() => handleTabChange("Dashboard")}
+              />
+            )
+          ) : activeTab === "Documents" ? (
+            <DocumentComplianceWorkspace />
+          ) : activeTab === "Analytics" ? (
+            <AnalyticsDashboard />
+          ) : activeTab === "Notifications" ? (
+            <NotificationCenter onNavigateTab={handleTabChange} />
+          ) : activeTab === "Donor Portal" ? (
+            <DonorDashboard />
+          ) : activeTab === "Fund Allocation" ? (
             <FundAllocation onBackToDashboard={() => handleTabChange("Dashboard")} />
           ) : activeTab === "Projects" ? (
-            <NgoProjects onNavigateToAllocation={() => handleTabChange("Fund Allocation")} />
+            activeRole === ROLES.PROJECT_MANAGER ? (
+              <ProjectManagerWorkspace onNavigateToAllocation={() => handleTabChange("Fund Allocation")} />
+            ) : (
+              <NgoProjects onNavigateToAllocation={() => handleTabChange("Fund Allocation")} />
+            )
           ) : activeTab === "Donations" ? (
             <NgoDonations donations={ngoDonations} onOpenDonate={onOpenDonate} />
           ) : activeTab === "Transactions" ? (
@@ -667,6 +835,13 @@ export const NgoDashboard = ({
           )}
         </main>
       </div>
+
+      {/* Omnibar Global Command Palette */}
+      <GlobalSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        onNavigateTab={handleTabChange}
+      />
     </div>
   );
 };
