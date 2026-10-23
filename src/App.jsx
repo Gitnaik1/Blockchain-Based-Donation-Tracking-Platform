@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Web3Provider } from "./context/Web3Context";
 import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
@@ -13,24 +13,37 @@ import { DonateModal } from "./components/DonateModal";
 import { NgoDetailsModal } from "./components/NgoDetailsModal";
 import { NgoLogin } from "./components/ngo-portal/NgoLogin";
 import { NgoDashboard } from "./components/ngo-portal/NgoDashboard";
-import { initialNgos } from "./data/ngosData";
-import { initialTransactions } from "./data/transactionsData";
-import { initialNgoDonations } from "./data/donationsData";
+import { donationService } from "./services/donationService";
+import { authService } from "./services/authService";
 
 export function AppContent() {
   // Navigation view: 'public' | 'ngo-login' | 'ngo-dashboard'
   const [currentView, setCurrentView] = useState("public");
   const [ngoDashboardTab, setNgoDashboardTab] = useState("Dashboard");
 
-  const [ngos, setNgos] = useState(initialNgos);
-  const [transactions, setTransactions] = useState(initialTransactions);
-  const [ngoDonations, setNgoDonations] = useState(initialNgoDonations);
+  const [ngos, setNgos] = useState(() => donationService.getNgos());
+  const [transactions, setTransactions] = useState(() => donationService.getTransactions());
+  const [ngoDonations, setNgoDonations] = useState(() => donationService.getDonations());
 
   const [isDonateOpen, setIsDonateOpen] = useState(false);
   const [selectedNgoForDonate, setSelectedNgoForDonate] = useState(null);
 
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedNgoForDetails, setSelectedNgoForDetails] = useState(null);
+
+  // Subscribe to authoritative donation service updates
+  useEffect(() => {
+    const unsubscribe = donationService.subscribe((state) => {
+      setDonationsState(state);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const setDonationsState = (state) => {
+    if (state.ngos) setNgos(state.ngos);
+    if (state.transactions) setTransactions(state.transactions);
+    if (state.donations) setNgoDonations(state.donations);
+  };
 
   const handleOpenDonate = (ngo = null) => {
     setSelectedNgoForDonate(ngo || ngos[0]);
@@ -44,67 +57,40 @@ export function AppContent() {
 
   const handleViewInLedger = () => {
     setNgoDashboardTab("Donations");
-    setCurrentView("ngo-dashboard");
+    // Verify authentication before opening dashboard
+    if (authService.isAuthenticated()) {
+      setCurrentView("ngo-dashboard");
+    } else {
+      setCurrentView("ngo-login");
+    }
   };
 
   const handleDonationComplete = (newTx, ngoId, amount) => {
-    // 1. Add transaction to the live cryptographic stream
-    setTransactions((prev) => [newTx, ...prev]);
-
-    // 2. Update the target NGO's raised sum and donor count
-    setNgos((prev) =>
-      prev.map((ngo) => {
-        if (ngo.id === ngoId) {
-          return {
-            ...ngo,
-            raised: ngo.raised + amount,
-            donorsCount: ngo.donorsCount + 1,
-          };
-        }
-        return ngo;
-      })
-    );
-
-    // 3. Add to the NGO Donations ledger!
-    const numAmount = parseFloat(newTx.amount);
-    const inrValue =
-      newTx.token === "POL"
-        ? Math.round(numAmount * 100)
-        : Math.round(numAmount * 85);
-
-    const targetNgo = ngos.find((n) => n.id === ngoId);
-    const projectName = targetNgo ? targetNgo.name : "Verified Cause";
-    const donorWallet =
-      newTx.fullWallet ||
-      (newTx.donor?.length === 42
-        ? newTx.donor
-        : "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1");
-    const donorName = newTx.donor?.startsWith("0x")
-      ? `Donor (${newTx.donor})`
-      : newTx.donor || "Recent Patron";
-
-    const newNgoDonation = {
-      id: newTx.id,
-      donor: donorName,
-      wallet: donorWallet,
-      amountInr: inrValue,
-      amountCrypto: `${newTx.amount} ${newTx.token}`,
+    // Add via authoritative donationService which handles deduplication, metrics, and persistence
+    donationService.addDonation({
+      txHash: newTx.hash,
+      amount: amount,
       token: newTx.token,
-      project: projectName,
-      date: "Just now",
-      isNew: true,
-      hash: newTx.hash,
+      ngoId: ngoId,
+      donorWallet: newTx.fullWallet,
+      donorName: newTx.donor,
       status: "Confirmed",
-      taxReceiptNo: `80G-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-    };
-
-    setNgoDonations((prev) => [newNgoDonation, ...prev]);
+      isSimulated: newTx.isSimulated || false,
+    });
   };
 
   const handleExploreClick = () => {
     const el = document.getElementById("ngos");
     if (el) {
       el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleNavigateToNgoPortal = () => {
+    if (authService.isAuthenticated()) {
+      setCurrentView("ngo-dashboard");
+    } else {
+      setCurrentView("ngo-login");
     }
   };
 
@@ -121,7 +107,10 @@ export function AppContent() {
       ) : currentView === "ngo-dashboard" ? (
         <NgoDashboard
           onBackToPublic={() => setCurrentView("public")}
-          onLogout={() => setCurrentView("ngo-login")}
+          onLogout={() => {
+            authService.clearSession();
+            setCurrentView("ngo-login");
+          }}
           ngoDonations={ngoDonations}
           onOpenDonate={() => handleOpenDonate()}
           initialTab={ngoDashboardTab}
@@ -132,7 +121,7 @@ export function AppContent() {
           {/* Navigation Header */}
           <Header
             onOpenDonate={() => handleOpenDonate()}
-            onNavigateToNgoPortal={() => setCurrentView("ngo-login")}
+            onNavigateToNgoPortal={handleNavigateToNgoPortal}
           />
 
           {/* Main Sections */}

@@ -1,7 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { X, ExternalLink, ShieldCheck, Heart, FileText, CheckCircle2 } from "lucide-react";
+import { shortenAddress } from "../services/utils/tokenMath";
 
 export const NgoDetailsModal = ({ isOpen, onClose, ngo, onDonateClick }) => {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && isOpen) {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !ngo) return null;
 
   const progressPercent = Math.min(
@@ -10,12 +21,18 @@ export const NgoDetailsModal = ({ isOpen, onClose, ngo, onDonateClick }) => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ngo-details-title"
+    >
       <div className="bg-white rounded-2xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8F0] relative overflow-hidden max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors z-10 bg-white/80 backdrop-blur-sm"
+          className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1.5 rounded-lg transition-colors z-10 bg-white/80 backdrop-blur-sm cursor-pointer"
+          aria-label="Close Details Modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -32,7 +49,7 @@ export const NgoDetailsModal = ({ isOpen, onClose, ngo, onDonateClick }) => {
             <span className="px-3 py-1 bg-[#DBEAFE] text-[#2563EB] text-xs font-inter font-semibold rounded-full shadow-sm">
               {ngo.category}
             </span>
-            <h3 className="text-2xl sm:text-3xl font-outfit font-black text-white mt-1">
+            <h3 id="ngo-details-title" className="text-2xl sm:text-3xl font-outfit font-black text-white mt-1">
               {ngo.name}
             </h3>
           </div>
@@ -66,7 +83,7 @@ export const NgoDetailsModal = ({ isOpen, onClose, ngo, onDonateClick }) => {
 
             <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#1E3A8A] rounded-full"
+                className="h-full bg-[#1E3A8A] rounded-full transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               ></div>
             </div>
@@ -87,7 +104,7 @@ export const NgoDetailsModal = ({ isOpen, onClose, ngo, onDonateClick }) => {
                 rel="noreferrer"
                 className="text-[#2563EB] font-mono font-bold hover:underline flex items-center justify-between"
               >
-                <span>{ngo.contractAddress.substring(0, 14)}...</span>
+                <span>{shortenAddress(ngo.contractAddress, 6)}</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -123,7 +140,7 @@ export const NgoDetailsModal = ({ isOpen, onClose, ngo, onDonateClick }) => {
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               onClick={onClose}
-              className="px-5 py-2.5 text-sm font-inter font-semibold text-[#64748B] hover:text-[#0F172A] border border-[#E2E8F0] rounded-lg transition-colors"
+              className="px-5 py-2.5 text-sm font-inter font-semibold text-[#64748B] hover:text-[#0F172A] border border-[#E2E8F0] rounded-lg transition-colors cursor-pointer"
             >
               Close
             </button>
@@ -132,7 +149,7 @@ export const NgoDetailsModal = ({ isOpen, onClose, ngo, onDonateClick }) => {
                 onClose();
                 onDonateClick(ngo);
               }}
-              className="px-6 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white text-sm font-inter font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5"
+              className="px-6 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white text-sm font-inter font-semibold rounded-lg shadow transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <Heart className="w-4 h-4 fill-white" />
               <span>Donate to {ngo.name}</span>

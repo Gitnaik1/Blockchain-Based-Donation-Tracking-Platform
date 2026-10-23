@@ -11,13 +11,16 @@ import {
   ExternalLink,
   X,
   Check,
+  Download,
+  Info,
 } from "lucide-react";
+import { formatInr } from "../../services/utils/tokenMath";
 
 const INITIAL_DONORS = [
   {
     id: "don-1",
     name: "Meera Subramanian",
-    wallet: "0x3A21...9a3B",
+    wallet: "0x3A2190B74dE865103AbF992E3c467B1028919a3B",
     tier: "Platinum",
     lifetimeInr: 250000,
     lifetimeCrypto: "2,500 POL",
@@ -29,7 +32,7 @@ const INITIAL_DONORS = [
   {
     id: "don-2",
     name: "Arjun Rao",
-    wallet: "0x91F5...2C89",
+    wallet: "0x91F5B612E0987c320dE51A186B1095d315682C89",
     tier: "Platinum",
     lifetimeInr: 185000,
     lifetimeCrypto: "1,850 USDT",
@@ -41,7 +44,7 @@ const INITIAL_DONORS = [
   {
     id: "don-3",
     name: "Kavita Reddy",
-    wallet: "0x2D4a...814E",
+    wallet: "0x2D4aB9185aC9204910e527027167520e5436814E",
     tier: "Gold",
     lifetimeInr: 95000,
     lifetimeCrypto: "950 POL",
@@ -53,7 +56,7 @@ const INITIAL_DONORS = [
   {
     id: "don-4",
     name: "Pooja Malhotra",
-    wallet: "0x7C04...659B",
+    wallet: "0x7C04f42E64A5F43e49e29aD348E2801F6E2c659B",
     tier: "Gold",
     lifetimeInr: 75000,
     lifetimeCrypto: "750 USDT",
@@ -65,19 +68,19 @@ const INITIAL_DONORS = [
   {
     id: "don-5",
     name: "Siddharth Verma",
-    wallet: "0x51E2...304B",
+    wallet: "0x51E2b43538446c761eA8196AfC88Fe0a91Da304B",
     tier: "Silver",
-    lifetimeInr: 45000,
-    lifetimeCrypto: "450 USDC",
+    lifetimeInr: 35000,
+    lifetimeCrypto: "350 USDC",
     donationsCount: 3,
     preferredCause: "Clean Water Initiative",
-    lastDonated: "22 May 2026",
+    lastDonated: "18 May 2026",
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80",
   },
 ];
 
 export const NgoDonors = () => {
-  const [donors, setDonors] = useState(INITIAL_DONORS);
+  const [donors] = useState(INITIAL_DONORS);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDonor, setSelectedDonor] = useState(null);
   const [messageSent, setMessageSent] = useState(false);
@@ -91,7 +94,24 @@ export const NgoDonors = () => {
     setTimeout(() => {
       setMessageSent(false);
       setSelectedDonor(null);
-    }, 1500);
+    }, 1800);
+  };
+
+  const handleExportDonors = () => {
+    const headers = "ID,Name,Wallet,Tier,Lifetime INR,Lifetime Crypto,Donations Count,Preferred Cause\n";
+    const rows = donors
+      .map(
+        (d) =>
+          `"${d.id}","${d.name}","${d.wallet}","${d.tier}","${d.lifetimeInr}","${d.lifetimeCrypto}","${d.donationsCount}","${d.preferredCause}"`
+      )
+      .join("\n");
+    const blob = new Blob([headers + rows], { type: "text/csv;charset=utf-8;" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `TrustDonate_Donors_Export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const filteredDonors = donors.filter(
@@ -104,13 +124,23 @@ export const NgoDonors = () => {
   return (
     <div className="flex flex-col gap-6 font-inter text-[#1E293B]">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold font-outfit text-[#071B3B]">
-          Donor Community &amp; CRM
-        </h2>
-        <p className="text-xs sm:text-[13px] text-[#66738A]">
-          Engage with transparent on-chain benefactors and dispatch verified impact updates.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold font-outfit text-[#071B3B]">
+            Donor Community &amp; Engagement CRM
+          </h2>
+          <p className="text-xs sm:text-[13px] text-[#66738A]">
+            Engage with verified on-chain benefactors with privacy controls and milestone notifications.
+          </p>
+        </div>
+
+        <button
+          onClick={handleExportDonors}
+          className="px-4 py-2 bg-white hover:bg-slate-50 border border-[#E2E8F0] rounded-xl text-xs font-semibold text-[#071B3B] flex items-center gap-1.5 shadow-sm transition-all self-start sm:self-auto cursor-pointer"
+        >
+          <Download className="w-3.5 h-3.5 text-[#1D5FD0]" />
+          <span>Export Donor List</span>
+        </button>
       </div>
 
       {/* KPI Cards */}
@@ -134,9 +164,11 @@ export const NgoDonors = () => {
         </div>
 
         <div className="p-4 bg-white rounded-2xl border border-[#E2E8F0] shadow-sm flex flex-col gap-1">
-          <span className="text-[11px] font-medium text-[#64748B]">Platinum Donors (&gt;₹1L)</span>
-          <span className="text-2xl font-bold font-outfit text-[#071B3B]">34</span>
-          <span className="text-[10px] text-slate-500 font-medium">Key philanthropists</span>
+          <span className="text-[11px] font-medium text-[#64748B]">Documented Tiers</span>
+          <span className="text-xs font-semibold text-[#071B3B] mt-1">
+            Platinum: &gt;₹1L • Gold: &gt;₹50k
+          </span>
+          <span className="text-[10px] text-slate-500 font-medium">Transparent rules</span>
         </div>
       </div>
 
@@ -160,11 +192,11 @@ export const NgoDonors = () => {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#64748B] font-semibold">
-                <th className="py-3.5 px-4">Donor Name &amp; Wallet</th>
+                <th className="py-3.5 px-4">Donor Name</th>
                 <th className="py-3.5 px-4">Tier Status</th>
-                <th className="py-3.5 px-4">Lifetime Contribution</th>
-                <th className="py-3.5 px-4">Supported Cause</th>
-                <th className="py-3.5 px-4">Last Active</th>
+                <th className="py-3.5 px-4">Lifetime Contributions</th>
+                <th className="py-3.5 px-4">Preferred Cause</th>
+                <th className="py-3.5 px-4">Last Activity</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -176,41 +208,39 @@ export const NgoDonors = () => {
                       <img
                         src={d.avatar}
                         alt={d.name}
-                        className="w-9 h-9 rounded-full object-cover border border-[#E2E8F0]"
+                        className="w-8 h-8 rounded-full object-cover border border-[#E2E8F0]"
                       />
                       <div className="flex flex-col">
                         <span className="font-bold text-[#071B3B]">{d.name}</span>
-                        <span className="font-mono text-[10px] text-[#64748B]">{d.wallet}</span>
+                        <span className="font-mono text-[10px] text-[#64748B]">{d.wallet.slice(0, 6)}...{d.wallet.slice(-4)}</span>
                       </div>
                     </div>
                   </td>
                   <td className="py-3.5 px-4">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         d.tier === "Platinum"
                           ? "bg-purple-100 text-purple-700"
                           : d.tier === "Gold"
-                          ? "bg-amber-100 text-amber-700"
+                          ? "bg-amber-100 text-amber-800"
                           : "bg-slate-100 text-slate-700"
                       }`}
                     >
-                      {d.tier} Patron
+                      {d.tier}
                     </span>
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="flex flex-col">
                       <span className="font-bold text-[#071B3B]">
-                        ₹{d.lifetimeInr.toLocaleString("en-IN")}
+                        {formatInr(d.lifetimeInr)}
                       </span>
-                      <span className="text-[10px] font-mono text-[#00C9A7]">
-                        {d.lifetimeCrypto} • {d.donationsCount} gifts
+                      <span className="font-mono text-[10px] text-[#00C9A7]">
+                        {d.lifetimeCrypto}
                       </span>
                     </div>
                   </td>
-                  <td className="py-3.5 px-4">
-                    <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[11px]">
-                      {d.preferredCause}
-                    </span>
+                  <td className="py-3.5 px-4 text-[#64748B] font-medium">
+                    {d.preferredCause}
                   </td>
                   <td className="py-3.5 px-4 text-[#64748B]">
                     {d.lastDonated}
@@ -218,10 +248,10 @@ export const NgoDonors = () => {
                   <td className="py-3.5 px-4 text-right">
                     <button
                       onClick={() => setSelectedDonor(d)}
-                      className="px-3 py-1.5 bg-[#071B3B] hover:bg-[#123F8C] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 ml-auto transition-colors cursor-pointer"
+                      className="px-3 py-1.5 bg-[#F1F5F9] hover:bg-slate-200 text-[#071B3B] font-semibold rounded-lg text-xs flex items-center gap-1.5 ml-auto transition-colors cursor-pointer"
                     >
-                      <Mail className="w-3 h-3" />
-                      <span>Send Update</span>
+                      <Mail className="w-3 h-3 text-[#1D5FD0]" />
+                      <span>Notify</span>
                     </button>
                   </td>
                 </tr>
@@ -242,21 +272,24 @@ export const NgoDonors = () => {
                 </div>
                 <div>
                   <h3 className="text-base font-bold font-outfit text-[#071B3B]">
-                    Send Verified Impact Update
+                    Send Milestone Impact Update
                   </h3>
                   <p className="text-[11px] text-[#64748B]">
-                    To: {selectedDonor.name} ({selectedDonor.wallet})
+                    Recipient: {selectedDonor.name}
                   </p>
                 </div>
               </div>
-              <button onClick={() => setSelectedDonor(null)} className="text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setSelectedDonor(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSendMessage} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-[#64748B]">Message Content</label>
+                <label className="text-xs font-semibold text-[#64748B]">Update Message</label>
                 <textarea
                   rows={4}
                   required
@@ -266,9 +299,11 @@ export const NgoDonors = () => {
                 />
               </div>
 
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Automatically attaches IPFS audit receipt and PolygonScan proof.</span>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <span className="text-[11px]">
+                  Environment Note: Production SMTP gateway is not configured. Outbound updates are committed to the local audit feed with IPFS proof metadata.
+                </span>
               </div>
 
               <div className="flex items-center gap-3 pt-2">
@@ -287,12 +322,12 @@ export const NgoDonors = () => {
                   {messageSent ? (
                     <>
                       <Check className="w-4 h-4" />
-                      <span>Sent Successfully!</span>
+                      <span>Queued to Audit Log</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-3.5 h-3.5" />
-                      <span>Dispatch On-Chain Note</span>
+                      <span>Dispatch Impact Note</span>
                     </>
                   )}
                 </button>
