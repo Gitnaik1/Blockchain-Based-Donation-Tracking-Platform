@@ -1,0 +1,134 @@
+/**
+ * TrustDonate RBAC - Centralized Permission Registry & Role Definitions
+ */
+
+const PERMISSIONS = {
+  // Platform Super Admin
+  PLATFORM_CONFIG_MANAGE: "platform:config:manage",
+  NGO_ONBOARDING_REVIEW: "ngo:onboarding:review",
+  NGO_SUSPEND_REACTIVATE: "ngo:suspend_reactivate",
+  PLATFORM_AUDIT_VIEW: "platform:audit:view",
+  RISK_ALERTS_MANAGE: "risk:alerts:manage",
+
+  // NGO Management & Profiles
+  NGO_MEMBERS_MANAGE: "ngo:members:manage",
+  NGO_PROFILE_MANAGE: "ngo:profile:manage",
+  PROJECTS_MANAGE: "projects:manage",
+  POLICIES_MANAGE: "policies:manage",
+
+  // Financial & Treasury
+  TREASURY_VIEW: "treasury:view",
+  RECONCILIATION_RUN: "reconciliation:run",
+  RECONCILIATION_ADJUST: "reconciliation:adjust",
+  DISBURSEMENTS_PROPOSE: "disbursements:propose",
+  DISBURSEMENTS_APPROVE: "disbursements:approve",
+  DISBURSEMENTS_EXECUTE: "disbursements:execute",
+  DISBURSEMENTS_CANCEL: "disbursements:cancel",
+
+  // Project Milestones & Reports
+  MILESTONES_PROPOSE: "milestones:propose",
+  EVIDENCE_SUBMIT: "evidence:submit",
+  REPORTS_SUBMIT: "reports:submit",
+  REPORTS_VIEW: "reports:view",
+
+  // Independent Audit & Compliance
+  AUDIT_ENGAGEMENTS_VIEW: "audit:engagements:view",
+  AUDIT_EVIDENCE_REQUEST: "audit:evidence:request",
+  AUDIT_FINDINGS_LOG: "audit:findings:log",
+  AUDIT_REPORT_SIGN: "audit:report:sign",
+
+  // Donor Actions
+  DONATIONS_VIEW_OWN: "donations:view:own",
+  PREFERENCES_MANAGE: "preferences:manage",
+
+  // Public / General Read
+  PUBLIC_READ: "public:read",
+};
+
+const ROLE_PERMISSIONS = {
+  PLATFORM_SUPER_ADMIN: [
+    PERMISSIONS.PLATFORM_CONFIG_MANAGE,
+    PERMISSIONS.NGO_ONBOARDING_REVIEW,
+    PERMISSIONS.NGO_SUSPEND_REACTIVATE,
+    PERMISSIONS.PLATFORM_AUDIT_VIEW,
+    PERMISSIONS.RISK_ALERTS_MANAGE,
+    PERMISSIONS.TREASURY_VIEW,
+    PERMISSIONS.REPORTS_VIEW,
+    PERMISSIONS.PUBLIC_READ,
+  ],
+
+  NGO_ADMIN: [
+    PERMISSIONS.NGO_MEMBERS_MANAGE,
+    PERMISSIONS.NGO_PROFILE_MANAGE,
+    PERMISSIONS.PROJECTS_MANAGE,
+    PERMISSIONS.POLICIES_MANAGE,
+    PERMISSIONS.TREASURY_VIEW,
+    PERMISSIONS.RECONCILIATION_RUN,
+    PERMISSIONS.DISBURSEMENTS_PROPOSE,
+    PERMISSIONS.DISBURSEMENTS_APPROVE,
+    PERMISSIONS.DISBURSEMENTS_CANCEL,
+    PERMISSIONS.MILESTONES_PROPOSE,
+    PERMISSIONS.REPORTS_SUBMIT,
+    PERMISSIONS.REPORTS_VIEW,
+    PERMISSIONS.PUBLIC_READ,
+  ],
+
+  FINANCE_OFFICER: [
+    PERMISSIONS.TREASURY_VIEW,
+    PERMISSIONS.RECONCILIATION_RUN,
+    PERMISSIONS.RECONCILIATION_ADJUST,
+    PERMISSIONS.DISBURSEMENTS_PROPOSE,
+    PERMISSIONS.DISBURSEMENTS_APPROVE,
+    PERMISSIONS.DISBURSEMENTS_EXECUTE,
+    PERMISSIONS.DISBURSEMENTS_CANCEL,
+    PERMISSIONS.REPORTS_VIEW,
+    PERMISSIONS.PUBLIC_READ,
+  ],
+
+  PROJECT_MANAGER: [
+    PERMISSIONS.PROJECTS_MANAGE,
+    PERMISSIONS.MILESTONES_PROPOSE,
+    PERMISSIONS.EVIDENCE_SUBMIT,
+    PERMISSIONS.REPORTS_SUBMIT,
+    PERMISSIONS.REPORTS_VIEW,
+    PERMISSIONS.PUBLIC_READ,
+  ],
+
+  INDEPENDENT_AUDITOR: [
+    PERMISSIONS.AUDIT_ENGAGEMENTS_VIEW,
+    PERMISSIONS.AUDIT_EVIDENCE_REQUEST,
+    PERMISSIONS.AUDIT_FINDINGS_LOG,
+    PERMISSIONS.AUDIT_REPORT_SIGN,
+    PERMISSIONS.TREASURY_VIEW,
+    PERMISSIONS.REPORTS_VIEW,
+    PERMISSIONS.PUBLIC_READ,
+  ],
+
+  DONOR: [
+    PERMISSIONS.DONATIONS_VIEW_OWN,
+    PERMISSIONS.PREFERENCES_MANAGE,
+    PERMISSIONS.PUBLIC_READ,
+  ],
+
+  VIEWER: [
+    PERMISSIONS.REPORTS_VIEW,
+    PERMISSIONS.PUBLIC_READ,
+  ],
+};
+
+function getPermissionsForRoles(roles = []) {
+  const permSet = new Set();
+  for (const role of roles) {
+    const perms = ROLE_PERMISSIONS[role] || [];
+    for (const p of perms) {
+      permSet.add(p);
+    }
+  }
+  return Array.from(permSet);
+}
+
+module.exports = {
+  PERMISSIONS,
+  ROLE_PERMISSIONS,
+  getPermissionsForRoles,
+};

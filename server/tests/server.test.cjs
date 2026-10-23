@@ -1,46 +1,26 @@
 const { expect } = require("chai");
-const http = require("http");
 const { ethers } = require("ethers");
 const app = require("../src/app.cjs");
+const { callApp } = require("./testHelper.cjs");
 
 describe("TrustDonate Backend API Integration Tests", function () {
-  let server;
-  let baseUrl;
   let testWallet;
 
-  before(function (done) {
+  before(function () {
     process.env.NODE_ENV = "test";
     testWallet = ethers.Wallet.createRandom();
-
-    server = http.createServer(app);
-    server.listen(0, () => {
-      const port = server.address().port;
-      baseUrl = `http://localhost:${port}`;
-      done();
-    });
   });
 
-  after(function (done) {
-    server.close(done);
+  after(function () {
+    // Teardown
   });
 
-  async function apiGet(path) {
-    const res = await fetch(`${baseUrl}${path}`);
-    const data = await res.json();
-    return { status: res.status, body: data };
+  async function apiGet(path, headers = {}) {
+    return callApp(app, { method: "GET", url: path, headers });
   }
 
   async function apiPost(path, body, headers = {}) {
-    const res = await fetch(`${baseUrl}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...headers,
-      },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    return { status: res.status, body: data };
+    return callApp(app, { method: "POST", url: path, headers, body });
   }
 
   describe("System Health & Config", function () {
@@ -171,12 +151,13 @@ describe("TrustDonate Backend API Integration Tests", function () {
       const sessionRes = await apiGet("/api/v1/auth/session");
       expect(sessionRes.status).to.equal(401); // without bearer
 
-      const authSessionRes = await fetch(`${baseUrl}/api/v1/auth/session`, {
-        headers: { Authorization: `Bearer ${verifyRes.body.data.token}` },
-      }).then((r) => r.json());
+      const authSessionRes = await apiGet("/api/v1/auth/session", {
+        Authorization: `Bearer ${verifyRes.body.data.token}`,
+      });
 
-      expect(authSessionRes.success).to.be.true;
-      expect(authSessionRes.data.address.toLowerCase()).to.equal(testWallet.address.toLowerCase());
+      expect(authSessionRes.status).to.equal(200);
+      expect(authSessionRes.body.success).to.be.true;
+      expect(authSessionRes.body.data.address.toLowerCase()).to.equal(testWallet.address.toLowerCase());
     });
   });
 

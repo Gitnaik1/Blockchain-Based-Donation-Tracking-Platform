@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "compile": "hardhat --config hardhat.config.cjs compile",
     "test:contracts": "hardhat --config hardhat.config.cjs test",
-    "test:server": "mocha server/tests/server.test.cjs",
+    "test:server": "mocha server/tests/*.test.cjs",
     "test:frontend": "node --test tests/*.test.js",
     "test": "npm run test:contracts && npm run test:server && npm run test:frontend",
     "server": "node server/src/server.cjs",

@@ -86,4 +86,42 @@ TrustDonate is a decentralized, non-custodial donation tracking and milestone re
 * **Native Token**: POL (18 decimals)
 * **Public RPC Endpoint**: `https://rpc-amoy.polygon.technology/`
 * **Block Explorer**: `https://amoy.polygonscan.com/`
-* **Local Test Environment**: Hardhat Local Network (`chainId: 31337`)
+---
+
+## 4. Phase 2 Enterprise Governance & Security Architecture
+
+### A. Centralized Enterprise Role-Based Access Control (RBAC)
+* **Centralized Registry**: Defined in `server/src/rbac/permissions.cjs` with fine-grained action permissions.
+* **Deny-by-Default**: Endpoints strictly reject callers unless explicit permission claims are present.
+* **Organization Scoping & IDOR Prevention**: Validates that non-super-admin actors possess active memberships within the specific NGO whose resources are requested.
+* **Instant Session Revocation**: Every user record contains a `token_version` column. Administrative role changes increment this version, instantaneously invalidating previously issued session tokens.
+
+### B. Controlled NGO Onboarding & Document Verification
+* **Lifecycle State Machine**: `DRAFT` $\to$ `SUBMITTED` $\to$ `UNDER_REVIEW` $\to$ `APPROVED` / `REJECTED` $\to$ `SUSPENDED` / `REACTIVATED`.
+* **Verification Checklist**: Document uploads for Legal Registration Certificate, 80G Tax Exemption, FCRA clearance, and Bank Account Proof are pinned to IPFS and validated.
+* **Conflict of Interest Protection**: Platform reviewers cannot review or approve onboarding applications they authored.
+* **Single-Use Team Invitations**: Cryptographically signed invitation tokens with a 7-day expiration link team members to organization roles.
+
+### C. Financial Governance & Dual-Control Separation of Duties
+* **Approval Policies**: Configurable per-NGO spending thresholds, per-transaction maximums, and required approval counts.
+* **Payload Hash Binding**: Proposals generate a deterministic SHA-256 hash of all financial parameters (`ngoId`, `projectId`, `token`, `amountRaw`, `recipientWallet`). Any change to these parameters invalidates prior approvals.
+* **Separation of Duties**: Proposers cannot review, approve, or execute their own financial disbursements.
+
+### D. Treasury Reconciliation & Auditable Accounting
+* **Append-Only Ledger**: All financial inflows, outflows, refunds, and adjustments are recorded as immutable entries in `treasury_ledger`.
+* **Integer-Safe Monetary Math**: Uses JavaScript `BigInt` for exact token wei / mwei accounting.
+* **On-Chain vs. Internal Reconciliation**: Automated checks compare authoritative blockchain state against internal accounting balances, raising automated alerts upon variance.
+
+### E. Explainable Fraud & Anomaly Monitoring
+* Heuristic evaluation of transaction velocity, unusually large payouts, recipient destination discrepancies, and authentication failures.
+* Explainable risk alerts classified by severity (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`) with required resolution audit trails.
+
+### F. Independent Auditor & Compliance Workflows
+* Formal audit engagement lifecycle with evidence requests, IPFS proof submissions, severity-rated findings, and management action plans.
+* Versioned audit reports cryptographically signed and content-addressed on IPFS.
+
+### G. Notifications & Background Job Runner
+* In-app notification delivery and user preference settings.
+* Non-custodial reminder mechanism for recurring donations (alerts user to sign periodic contributions with their own wallet, strictly avoiding private key custody).
+* Idempotent background job queue with exponential backoff and retry limits.
+
