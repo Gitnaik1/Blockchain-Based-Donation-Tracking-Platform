@@ -445,44 +445,45 @@ export const DonorDashboard = ({ onOpenDonate, initialTab = "history", serviceDo
                     </tr>
                   ) : (
                     filtered.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-[#071B3B]">{item.ngoName}</span>
-                          <span className="text-[11px] text-[#1D5FD0]">{item.project}</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-[#071B3B]">{formatInr(item.amountInr)}</span>
-                          <span className="font-mono text-[10px] text-emerald-600 font-semibold">{item.amountCrypto}</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-[#64748B]">
-                        {item.date}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <a
-                          href={`https://amoy.polygonscan.com/tx/${item.hash}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-mono text-[11px] text-[#1D5FD0] hover:underline flex items-center gap-1"
-                        >
-                          <span>{shortenTxHash(item.hash, 6)}</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => handleDownloadReceipt(item)}
-                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#1E3A8A] rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>Receipt ({item.taxReceiptNo})</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                      <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-[#071B3B]">{item.ngoName}</span>
+                            <span className="text-[11px] text-[#1D5FD0]">{item.project}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-[#071B3B]">{formatInr(item.amountInr)}</span>
+                            <span className="font-mono text-[10px] text-emerald-600 font-semibold">{item.amountCrypto}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-[#64748B]">
+                          {item.date}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <a
+                            href={`https://amoy.polygonscan.com/tx/${item.hash}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-mono text-[11px] text-[#1D5FD0] hover:underline flex items-center gap-1"
+                          >
+                            <span>{shortenTxHash(item.hash, 6)}</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() => handleDownloadReceipt(item)}
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#1E3A8A] rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Receipt ({item.taxReceiptNo})</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
