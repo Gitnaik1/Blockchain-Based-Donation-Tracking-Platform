@@ -94,6 +94,7 @@ export const LoginPage = ({ onLoginSuccess, isDonorOnly = false }) => {
         wallet: activeAccount,
         signature,
         nonce: challenge.nonce,
+        message: challenge.message,
         isDemo,
       });
 
@@ -109,7 +110,7 @@ export const LoginPage = ({ onLoginSuccess, isDonorOnly = false }) => {
           onLoginSuccess(session);
         } else {
           // Default role-aware routing
-          routeByRole(session.role);
+          routeByRole(session.activeRole || session.role || session.globalRole);
         }
       }, 700);
     } catch (err) {
@@ -150,6 +151,7 @@ export const LoginPage = ({ onLoginSuccess, isDonorOnly = false }) => {
     switch (role) {
       case ROLES.SUPER_ADMIN:
       case "PLATFORM_ADMIN":
+      case "PLATFORM_SUPER_ADMIN":
         navigate("/admin");
         break;
       case ROLES.AUDITOR:
@@ -163,6 +165,8 @@ export const LoginPage = ({ onLoginSuccess, isDonorOnly = false }) => {
         navigate("/projects");
         break;
       case ROLES.DONOR:
+      case "AUTHORIZED_DONOR":
+      case "DONOR":
         navigate("/donor/dashboard");
         break;
       default:

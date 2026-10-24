@@ -80,7 +80,7 @@ export const DonateModal = ({
     setModalStep("review");
   };
 
-  const handleConfirmAndSign = async () => {
+  const handleConfirmAndSign = async (forceDemo = false) => {
     setErrorMessage(null);
 
     // If wallet not connected, connect first
@@ -94,7 +94,7 @@ export const DonateModal = ({
       activeAccount = connRes.account;
     }
 
-    if (isWrongNetwork) {
+    if (!forceDemo && isWrongNetwork) {
       const switched = await switchOrAddAmoyNetwork();
       if (!switched) {
         setErrorMessage("Please switch to Polygon Amoy Testnet to proceed.");
@@ -111,7 +111,7 @@ export const DonateModal = ({
         to: currentNgo.contractAddress,
         amount: amount,
         token: token,
-        isDemo,
+        isDemo: isDemo || forceDemo,
       });
 
       setModalStep("pending");
@@ -422,9 +422,49 @@ export const DonateModal = ({
             <h4 className="text-xl font-outfit font-bold text-[#0F172A]">
               Transaction Failed
             </h4>
-            <p className="text-xs text-red-600 bg-red-50 p-3 rounded-lg border border-red-200 max-w-sm text-left font-mono">
+            <p className="text-xs text-red-600 bg-red-50 p-3 rounded-lg border border-red-200 max-w-sm text-left font-mono break-all">
               {errorMessage || "Transaction could not be completed."}
             </p>
+
+            {/* Proactive RPC Resolution Box */}
+            {(errorMessage?.toLowerCase().includes("rpc") ||
+              errorMessage?.toLowerCase().includes("eth_getblockbynumber") ||
+              errorMessage?.toLowerCase().includes("endpoint") ||
+              errorMessage?.toLowerCase().includes("0x13882")) && (
+              <div className="w-full bg-amber-50 border border-amber-200 rounded-xl p-3 text-left flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-amber-800 font-semibold text-xs">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span>MetaMask RPC Congestion Detected</span>
+                </div>
+                <p className="text-[11px] text-amber-700 leading-relaxed">
+                  Polygon's official testnet RPC is currently timing out in MetaMask. You can update MetaMask to a high-speed RPC or complete the donation instantly via simulated execution:
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const res = await web3Service.updateAmoyRpc();
+                      if (res.success) {
+                        setModalStep("review");
+                      }
+                    }}
+                    className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Update MetaMask RPC</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleConfirmAndSign(true)}
+                    className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Complete via Simulation</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-3 w-full mt-2">
               <button
                 type="button"

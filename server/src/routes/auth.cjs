@@ -29,7 +29,8 @@ function clearSessionCookie(res) {
  */
 router.post("/challenge", (req, res, next) => {
   try {
-    const { address, domain, uri, chainId } = req.body;
+    const address = req.body.address || req.body.wallet;
+    const { domain, uri, chainId } = req.body;
     if (!address) {
       return res.status(400).json({
         success: false,
@@ -50,8 +51,22 @@ router.post("/challenge", (req, res, next) => {
  */
 router.post("/verify", async (req, res, next) => {
   try {
-    const { message, signature } = req.body;
-    if (!message || !signature) {
+    let { message, signature, nonce } = req.body;
+    if (!signature) {
+      return res.status(400).json({
+        success: false,
+        error: { code: "INVALID_BODY", message: "Both message and signature are required." },
+      });
+    }
+
+    if (!message && nonce) {
+      const challengeRecord = db.prepare("SELECT * FROM auth_challenges WHERE nonce = ? AND used = 0").get(nonce);
+      if (challengeRecord) {
+        message = challengeRecord.message;
+      }
+    }
+
+    if (!message) {
       return res.status(400).json({
         success: false,
         error: { code: "INVALID_BODY", message: "Both message and signature are required." },

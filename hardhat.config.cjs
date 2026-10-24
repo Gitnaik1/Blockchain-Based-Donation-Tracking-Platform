@@ -18,7 +18,7 @@ module.exports = {
       chainId: 31337,
     },
     amoy: {
-      url: process.env.POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology/",
+      url: process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy.drpc.org",
       chainId: 80002,
       accounts: process.env.PRIVATE_KEY_DEPLOYER && process.env.PRIVATE_KEY_DEPLOYER.length === 66
         ? [process.env.PRIVATE_KEY_DEPLOYER]

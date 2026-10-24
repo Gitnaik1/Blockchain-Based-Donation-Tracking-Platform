@@ -63,13 +63,34 @@ class AuthService {
     // Try backend API if not in forced mock mode
     if (!APP_CONFIG.useMockBackend) {
       try {
+        const domain = typeof window !== "undefined" && window.location.host ? window.location.host : "localhost:5173";
+        const uri = typeof window !== "undefined" && window.location.origin ? window.location.origin : "http://localhost:5173";
+
         const res = await fetch(`${APP_CONFIG.apiBaseUrl}/auth/challenge`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ wallet: walletAddress }),
+          credentials: "include",
+          body: JSON.stringify({
+            address: walletAddress,
+            wallet: walletAddress,
+            domain,
+            uri,
+            chainId: APP_CONFIG.targetChainId || 80002,
+          }),
         });
         if (res.ok) {
-          return await res.json();
+          const body = await res.json();
+          const challenge = body.data || body;
+          return {
+            nonce: challenge.nonce,
+            message: challenge.message,
+            timestamp: Date.now(),
+            expiresAt: challenge.expiresAt,
+            isMock: false,
+          };
+        } else {
+          const errBody = await res.json().catch(() => ({}));
+          console.warn("Backend challenge endpoint returned error:", errBody);
         }
       } catch (err) {
         console.warn("Backend challenge endpoint unreachable, falling back to local challenge adapter:", err);
@@ -134,10 +155,11 @@ class AuthService {
    * @param {string} params.wallet
    * @param {string} params.signature
    * @param {string} params.nonce
+   * @param {string} [params.message]
    * @param {boolean} params.isDemo
    * @returns {Promise<Object>} Session object
    */
-  async verifySession({ wallet, signature, nonce, isDemo = false }) {
+  async verifySession({ wallet, signature, nonce, message, isDemo = false }) {
     if (!wallet || !signature) {
       throw new Error("Missing wallet address or signature for authentication.");
     }
@@ -148,23 +170,35 @@ class AuthService {
         const res = await fetch(`${APP_CONFIG.apiBaseUrl}/auth/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ wallet, signature, nonce }),
+          credentials: "include",
+          body: JSON.stringify({
+            wallet,
+            signature,
+            nonce,
+            message,
+          }),
         });
         if (res.ok) {
-          const data = await res.json();
+          const body = await res.json();
+          const data = body.data || body;
           this.session = {
+            ...data,
             token: data.token,
-            wallet,
+            wallet: data.wallet || wallet,
             ngoName: data.ngoName || "Asha Foundation",
-            role: data.role || "Admin",
+            role: data.role || data.activeRole || "Admin",
+            globalRole: data.globalRole,
+            activeRole: data.activeRole,
+            userId: data.userId,
             authMode: "production",
-            expiresAt: data.expiresAt || Date.now() + 60 * 60 * 1000,
+            expiresAt: data.expiresAt || Date.now() + 24 * 60 * 60 * 1000,
           };
           sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(this.session));
           return this.session;
         } else {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || "Backend rejected wallet authentication signature.");
+          const errMsg = errData.error?.message || errData.message || "Backend rejected wallet authentication signature.";
+          throw new Error(errMsg);
         }
       } catch (err) {
         if (!APP_CONFIG.useMockBackend) {

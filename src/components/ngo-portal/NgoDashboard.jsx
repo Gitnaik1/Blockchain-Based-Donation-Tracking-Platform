@@ -86,12 +86,45 @@ export const NgoDashboard = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Sync if initialTab changes from parent
+  const [currentDonorTab, setCurrentDonorTab] = useState(donorInitialTab || "history");
+
   useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
+    if (donorInitialTab) {
+      setCurrentDonorTab(donorInitialTab);
     }
-  }, [initialTab]);
+  }, [donorInitialTab]);
+
+  // Default tab based on active role
+  const getDefaultTabForRole = (role) => {
+    switch (role) {
+      case ROLES.DONOR:
+        return "Donor Portal";
+      case ROLES.SUPER_ADMIN:
+        return "Super Admin";
+      case ROLES.AUDITOR:
+        return "Auditor";
+      case ROLES.FINANCE_OFFICER:
+        return "Finance";
+      case ROLES.PROJECT_MANAGER:
+        return "Projects";
+      case ROLES.VIEWER:
+        return "Transactions";
+      case ROLES.NGO_ADMIN:
+      default:
+        return "Dashboard";
+    }
+  };
+
+  // Sync if initialTab changes or if activeRole switches
+  useEffect(() => {
+    if (initialTab && initialTab !== "Dashboard") {
+      setActiveTab(initialTab);
+    } else if (activeRole && activeRole !== ROLES.NGO_ADMIN) {
+      setActiveTab(getDefaultTabForRole(activeRole));
+    } else {
+      setActiveTab("Dashboard");
+    }
+  }, [initialTab, activeRole]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -103,8 +136,17 @@ export const NgoDashboard = ({
       else if (tab === "Auditor") navigate("/auditor");
       else if (tab === "Finance") navigate("/finance");
       else if (tab === "Projects") navigate("/projects");
+      else if (tab === "Approvals") navigate("/approvals");
+      else if (tab === "Risk Alerts") navigate("/risk");
       else if (tab === "Donor Portal") navigate("/donor/dashboard");
-      else if (tab === "Dashboard") navigate("/ngo/dashboard");
+      else if (tab === "Dashboard") {
+        if (activeRole === ROLES.DONOR) navigate("/donor/dashboard");
+        else if (activeRole === ROLES.SUPER_ADMIN) navigate("/admin");
+        else if (activeRole === ROLES.AUDITOR) navigate("/auditor");
+        else if (activeRole === ROLES.FINANCE_OFFICER) navigate("/finance");
+        else if (activeRole === ROLES.PROJECT_MANAGER) navigate("/projects");
+        else navigate("/ngo/dashboard");
+      }
     }
   };
 
@@ -137,28 +179,118 @@ export const NgoDashboard = ({
     );
   };
 
-  const navItems = [
-    ...(activeRole === ROLES.SUPER_ADMIN
-      ? [{ label: "Super Admin", icon: ShieldCheck, badge: "Gov" }]
-      : []),
-    { label: "Dashboard", icon: LayoutDashboard },
-    { label: "Approvals", icon: KeyRound, badge: "Multi-Sig" },
-    { label: "Finance", icon: Landmark },
-    { label: "Projects", icon: FolderKanban },
-    { label: "Fund Allocation", icon: PieChart },
-    { label: "Team", icon: Users },
-    { label: "Documents", icon: FileText },
-    { label: "Auditor", icon: ShieldCheck },
-    { label: "Risk Alerts", icon: ShieldAlert },
-    { label: "Analytics", icon: BarChart3 },
-    { label: "Notifications", icon: Bell },
-    { label: "Donor Portal", icon: Heart },
-    { label: "Donations", icon: Heart },
-    { label: "Transactions", icon: ArrowLeftRight },
-    { label: "Impact Reports", icon: FileCheck },
-    { label: "Donors", icon: Users },
-    { label: "Settings", icon: Settings },
-  ];
+  // Role-Specific Navigation Definitions
+  const getNavItemsForRole = (role) => {
+    switch (role) {
+      case ROLES.DONOR:
+        return [
+          { label: "My Donations", icon: Heart, badge: "80G", targetTab: "Donor Portal", donorSubTab: "history", path: "/donor/dashboard" },
+          { label: "Impact Milestones", icon: Sparkles, targetTab: "Donor Portal", donorSubTab: "impact", path: "/donor/dashboard" },
+          { label: "Recurring Pledges", icon: ArrowLeftRight, targetTab: "Donor Portal", donorSubTab: "recurring", path: "/donor/dashboard" },
+          { label: "Profile & Wallet", icon: Users, targetTab: "Donor Portal", donorSubTab: "profile", path: "/donor/profile" },
+          { label: "Tax & Settings", icon: Settings, targetTab: "Donor Portal", donorSubTab: "settings", path: "/donor/settings" },
+          { label: "Public Ledger", icon: FileText, badge: "Amoy", targetTab: "Transactions" },
+          { label: "Notifications", icon: Bell, targetTab: "Notifications" },
+          { label: "Explore Causes", icon: Globe, action: () => navigate && navigate("/") },
+        ];
+
+      case ROLES.FINANCE_OFFICER:
+        return [
+          { label: "Finance Workspace", icon: Landmark, badge: "Treasury", targetTab: "Finance", path: "/finance" },
+          { label: "Approvals", icon: KeyRound, badge: "Multi-Sig", targetTab: "Approvals", path: "/approvals" },
+          { label: "Fund Allocation", icon: PieChart, targetTab: "Fund Allocation" },
+          { label: "Transactions Ledger", icon: ArrowLeftRight, targetTab: "Transactions" },
+          { label: "Documents & Vault", icon: FileText, targetTab: "Documents" },
+          { label: "Risk Alerts", icon: ShieldAlert, targetTab: "Risk Alerts", path: "/risk" },
+          { label: "Treasury Analytics", icon: BarChart3, targetTab: "Analytics" },
+          { label: "Notifications", icon: Bell, targetTab: "Notifications" },
+        ];
+
+      case ROLES.PROJECT_MANAGER:
+        return [
+          { label: "Projects & Milestones", icon: FolderKanban, badge: "Field", targetTab: "Projects", path: "/projects" },
+          { label: "Deliverables & Proofs", icon: FileText, badge: "IPFS", targetTab: "Documents" },
+          { label: "Impact Reports", icon: FileCheck, targetTab: "Impact Reports" },
+          { label: "Fund Allocation", icon: PieChart, targetTab: "Fund Allocation" },
+          { label: "Notifications", icon: Bell, targetTab: "Notifications" },
+        ];
+
+      case ROLES.AUDITOR:
+        return [
+          { label: "Auditor Portal", icon: ShieldCheck, badge: "Audits", targetTab: "Auditor", path: "/auditor" },
+          { label: "Compliance Vault", icon: FileText, badge: "IPFS", targetTab: "Documents" },
+          { label: "Impact Reports", icon: FileCheck, targetTab: "Impact Reports" },
+          { label: "On-Chain Ledger", icon: ArrowLeftRight, badge: "Ledger", targetTab: "Transactions" },
+          { label: "Risk Alerts", icon: ShieldAlert, targetTab: "Risk Alerts", path: "/risk" },
+          { label: "Notifications", icon: Bell, targetTab: "Notifications" },
+        ];
+
+      case ROLES.SUPER_ADMIN:
+        return [
+          { label: "Super Admin", icon: ShieldCheck, badge: "Gov", targetTab: "Super Admin", path: "/admin" },
+          { label: "Auditor Portal", icon: ShieldCheck, targetTab: "Auditor", path: "/auditor" },
+          { label: "Risk Alerts", icon: ShieldAlert, badge: "Alerts", targetTab: "Risk Alerts", path: "/risk" },
+          { label: "Platform Analytics", icon: BarChart3, targetTab: "Analytics" },
+          { label: "Documents & IPFS", icon: FileText, targetTab: "Documents" },
+          { label: "Transactions", icon: ArrowLeftRight, targetTab: "Transactions" },
+          { label: "Notifications", icon: Bell, targetTab: "Notifications" },
+          { label: "Settings", icon: Settings, targetTab: "Settings" },
+        ];
+
+      case ROLES.VIEWER:
+        return [
+          { label: "Public Ledger", icon: ArrowLeftRight, badge: "Live", targetTab: "Transactions" },
+          { label: "Impact Reports", icon: FileCheck, targetTab: "Impact Reports" },
+          { label: "Analytics", icon: BarChart3, targetTab: "Analytics" },
+          { label: "Explore NGOs", icon: Globe, action: () => navigate && navigate("/") },
+        ];
+
+      case ROLES.NGO_ADMIN:
+      default:
+        return [
+          { label: "Dashboard", icon: LayoutDashboard, targetTab: "Dashboard", path: "/ngo/dashboard" },
+          { label: "Approvals", icon: KeyRound, badge: "Multi-Sig", targetTab: "Approvals", path: "/approvals" },
+          { label: "Finance", icon: Landmark, targetTab: "Finance", path: "/finance" },
+          { label: "Projects", icon: FolderKanban, targetTab: "Projects", path: "/projects" },
+          { label: "Fund Allocation", icon: PieChart, targetTab: "Fund Allocation" },
+          { label: "Team Management", icon: Users, badge: "Staff", targetTab: "Team" },
+          { label: "Documents & Vault", icon: FileText, targetTab: "Documents" },
+          { label: "Donations Ledger", icon: Heart, targetTab: "Donations" },
+          { label: "Donor Directory", icon: Users, targetTab: "Donors" },
+          { label: "Transactions", icon: ArrowLeftRight, targetTab: "Transactions" },
+          { label: "Impact Reports", icon: FileCheck, targetTab: "Impact Reports" },
+          { label: "Analytics", icon: BarChart3, targetTab: "Analytics" },
+          { label: "Risk Alerts", icon: ShieldAlert, targetTab: "Risk Alerts", path: "/risk" },
+          { label: "Notifications", icon: Bell, targetTab: "Notifications" },
+          { label: "NGO Settings", icon: Settings, targetTab: "Settings" },
+        ];
+    }
+  };
+
+  const navItems = getNavItemsForRole(activeRole);
+
+  const handleNavItemClick = (item) => {
+    if (item.action) {
+      item.action();
+      return;
+    }
+    const target = item.targetTab || item.label;
+    if (item.donorSubTab) {
+      setCurrentDonorTab(item.donorSubTab);
+    }
+    handleTabChange(target);
+    if (item.path && navigate) {
+      navigate(item.path);
+    }
+  };
+
+  const isItemActive = (item) => {
+    if (item.donorSubTab) {
+      return activeTab === "Donor Portal" && currentDonorTab === item.donorSubTab;
+    }
+    const target = item.targetTab || item.label;
+    return activeTab === target;
+  };
 
   const displayWallet = account
     ? `${account.substring(0, 6)}...${account.substring(account.length - 4)}`
@@ -182,41 +314,72 @@ export const NgoDashboard = ({
       >
         <div className="flex flex-col gap-7">
           {/* Brand Logo & Close on mobile */}
-          <div className="flex items-center justify-between px-2 pt-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-[34px] h-[34px] bg-white rounded-[10px] flex items-center justify-center shadow-md">
-                <div className="w-[19px] h-[19px] border-[1.5px] border-[#123F8C] rounded-[3px] flex items-center justify-center">
-                  <div className="w-1.5 h-1.5 bg-[#123F8C] rounded-full"></div>
+          <div className="flex flex-col gap-2 px-2 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-[34px] h-[34px] bg-white rounded-[10px] flex items-center justify-center shadow-md">
+                  <div className="w-[19px] h-[19px] border-[1.5px] border-[#123F8C] rounded-[3px] flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 bg-[#123F8C] rounded-full"></div>
+                  </div>
                 </div>
+                <span className="text-white text-xl font-outfit font-bold tracking-tight">
+                  TrustDonate
+                </span>
               </div>
-              <span className="text-white text-xl font-outfit font-bold tracking-tight">
-                TrustDonate
+              <button
+                onClick={() => setMobileSidebarOpen(false)}
+                className="lg:hidden text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Role-Specific Portal Badge */}
+            <div className="flex items-center gap-1.5 pl-0.5">
+              <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${
+                activeRole === ROLES.DONOR
+                  ? "text-emerald-400 bg-emerald-950/60 border-emerald-800/60"
+                  : activeRole === ROLES.SUPER_ADMIN
+                  ? "text-purple-400 bg-purple-950/60 border-purple-800/60"
+                  : activeRole === ROLES.AUDITOR
+                  ? "text-amber-400 bg-amber-950/60 border-amber-800/60"
+                  : activeRole === ROLES.FINANCE_OFFICER
+                  ? "text-cyan-400 bg-cyan-950/60 border-cyan-800/60"
+                  : activeRole === ROLES.PROJECT_MANAGER
+                  ? "text-blue-400 bg-blue-950/60 border-blue-800/60"
+                  : "text-slate-300 bg-slate-800/60 border-slate-700/60"
+              }`}>
+                {activeRole === ROLES.DONOR
+                  ? "Donor Engagement Hub"
+                  : activeRole === ROLES.SUPER_ADMIN
+                  ? "Platform Admin Console"
+                  : activeRole === ROLES.AUDITOR
+                  ? "Auditor Evidence Portal"
+                  : activeRole === ROLES.FINANCE_OFFICER
+                  ? "Finance & MultiSig Hub"
+                  : activeRole === ROLES.PROJECT_MANAGER
+                  ? "Field Project Workspace"
+                  : (activeOrganization?.name || "NGO Governance")}
               </span>
             </div>
-            <button
-              onClick={() => setMobileSidebarOpen(false)}
-              className="lg:hidden text-slate-400 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
 
           {/* Nav Items */}
           <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-270px)] pr-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.label;
-              const isFundTab = item.label === "Fund Allocation";
+              const isActive = isItemActive(item);
+              const isHighlight = item.label === "Fund Allocation" || item.badge === "80G";
               return (
                 <button
                   key={item.label}
                   onClick={() => {
-                    handleTabChange(item.label);
+                    handleNavItemClick(item);
                     setMobileSidebarOpen(false);
                   }}
                   className={`w-full h-10 px-3 rounded-xl flex items-center justify-between text-xs font-medium transition-all cursor-pointer ${
                     isActive
-                      ? isFundTab
+                      ? isHighlight
                         ? "bg-[#00C9A7]/20 text-[#00C9A7] font-bold border border-[#00C9A7]/30 shadow-sm"
                         : "bg-white/10 text-white font-semibold shadow-sm"
                       : "text-[#A9B7D0] hover:text-white hover:bg-white/5"
@@ -226,7 +389,7 @@ export const NgoDashboard = ({
                     <Icon
                       className={`w-4 h-4 flex-shrink-0 ${
                         isActive
-                          ? isFundTab
+                          ? isHighlight
                             ? "text-[#00C9A7]"
                             : "text-white"
                           : "text-[#A9B7D0]"
@@ -235,10 +398,14 @@ export const NgoDashboard = ({
                     <span className="truncate">{item.label}</span>
                   </div>
                   {item.badge ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-[#00C9A7] font-mono font-bold">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                      item.badge === "80G"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-white/10 text-[#00C9A7]"
+                    }`}>
                       {item.badge}
                     </span>
-                  ) : isFundTab ? (
+                  ) : isHighlight && item.label === "Fund Allocation" ? (
                     <span className="w-2 h-2 rounded-full bg-[#00C9A7] animate-pulse"></span>
                   ) : null}
                 </button>
@@ -348,7 +515,7 @@ export const NgoDashboard = ({
                   {currentUser?.name || "Dr. Alok Verma"}
                 </span>
                 <span className="text-[#66738A] text-[10px] leading-tight">
-                  {ROLE_LABELS[activeRole]} • {activeOrganization?.name || "Platform"}
+                  {ROLE_LABELS[activeRole]} • {activeRole === ROLES.DONOR ? "Verified Patron" : (activeOrganization?.name || "Platform")}
                 </span>
               </div>
             </div>
@@ -360,13 +527,38 @@ export const NgoDashboard = ({
           {/* Breadcrumbs and Back Navigation Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
             <div className="flex items-center gap-3">
-              <BackButton fallback="/ngo/dashboard" />
+              <BackButton fallback={activeRole === ROLES.DONOR ? "/donor/dashboard" : activeRole === ROLES.SUPER_ADMIN ? "/admin" : activeRole === ROLES.AUDITOR ? "/auditor" : activeRole === ROLES.FINANCE_OFFICER ? "/finance" : activeRole === ROLES.PROJECT_MANAGER ? "/projects" : "/ngo/dashboard"} />
               <Breadcrumbs
                 items={[
-                  { label: "NGO Workspace", path: "/ngo/dashboard" },
-                  ...(activeTab !== "Dashboard"
+                  {
+                    label:
+                      activeRole === ROLES.DONOR
+                        ? "Donor Hub"
+                        : activeRole === ROLES.SUPER_ADMIN
+                        ? "Super Admin"
+                        : activeRole === ROLES.AUDITOR
+                        ? "Auditor Portal"
+                        : activeRole === ROLES.FINANCE_OFFICER
+                        ? "Finance Workspace"
+                        : activeRole === ROLES.PROJECT_MANAGER
+                        ? "Project Workspace"
+                        : "NGO Workspace",
+                    path:
+                      activeRole === ROLES.DONOR
+                        ? "/donor/dashboard"
+                        : activeRole === ROLES.SUPER_ADMIN
+                        ? "/admin"
+                        : activeRole === ROLES.AUDITOR
+                        ? "/auditor"
+                        : activeRole === ROLES.FINANCE_OFFICER
+                        ? "/finance"
+                        : activeRole === ROLES.PROJECT_MANAGER
+                        ? "/projects"
+                        : "/ngo/dashboard",
+                  },
+                  ...(activeTab !== "Dashboard" && activeTab !== "Donor Portal"
                     ? [{ label: activeTab, active: true }]
-                    : [{ label: "Overview", active: true }]),
+                    : [{ label: activeRole === ROLES.DONOR ? "My Contributions" : "Overview", active: true }]),
                 ]}
               />
             </div>
@@ -446,7 +638,7 @@ export const NgoDashboard = ({
           ) : activeTab === "Notifications" ? (
             <NotificationCenter onNavigateTab={handleTabChange} />
           ) : activeTab === "Donor Portal" ? (
-            <DonorDashboard onOpenDonate={onOpenDonate} initialTab={donorInitialTab} />
+            <DonorDashboard onOpenDonate={onOpenDonate} initialTab={currentDonorTab} />
           ) : activeTab === "Fund Allocation" ? (
             <FundAllocation onBackToDashboard={() => handleTabChange("Dashboard")} />
           ) : activeTab === "Projects" ? (
@@ -466,22 +658,33 @@ export const NgoDashboard = ({
           ) : activeTab === "Settings" ? (
             <NgoSettings />
           ) : (
-            <>
-              {/* Header Greeting */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <h1 className="text-2xl sm:text-[28px] font-outfit font-bold text-[#071B3B]">
-                Good morning, Priya
-              </h1>
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs sm:text-[13px] text-[#66738A]">
-                  Here’s how Asha Foundation is creating impact today.
-                </p>
-                <span className="text-[10px] bg-slate-100 text-[#64748B] px-2 py-0.5 rounded border border-slate-200">
-                  Documented baseline: 1 POL ≈ ₹100, 1 USDC/USDT ≈ ₹85
-                </span>
-              </div>
-            </div>
+            activeRole === ROLES.DONOR ? (
+              <DonorDashboard onOpenDonate={onOpenDonate} initialTab={currentDonorTab} />
+            ) : activeRole === ROLES.SUPER_ADMIN ? (
+              <SuperAdminDashboard />
+            ) : activeRole === ROLES.AUDITOR ? (
+              <AuditorPortal />
+            ) : activeRole === ROLES.FINANCE_OFFICER ? (
+              <FinanceWorkspace />
+            ) : activeRole === ROLES.PROJECT_MANAGER ? (
+              <ProjectManagerWorkspace onNavigateToAllocation={() => handleTabChange("Fund Allocation")} />
+            ) : (
+              <>
+                {/* Header Greeting */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl sm:text-[28px] font-outfit font-bold text-[#071B3B]">
+                      Good morning, {currentUser?.name?.split(" ")[0] || "Director"}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs sm:text-[13px] text-[#66738A]">
+                        Here’s how {activeOrganization?.name || "your organization"} is creating impact today.
+                      </p>
+                      <span className="text-[10px] bg-slate-100 text-[#64748B] px-2 py-0.5 rounded border border-slate-200">
+                        Documented baseline: 1 POL ≈ ₹100, 1 USDC/USDT ≈ ₹85
+                      </span>
+                    </div>
+                  </div>
 
             <div className="flex items-center gap-2.5">
               <button
@@ -832,7 +1035,8 @@ export const NgoDashboard = ({
               </div>
             </div>
           </div>
-            </>
+              </>
+            )
           )}
         </main>
       </div>

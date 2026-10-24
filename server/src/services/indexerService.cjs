@@ -14,7 +14,7 @@ if (fs.existsSync(abiPath)) {
 
 class IndexerService {
   constructor() {
-    this.rpcUrl = process.env.POLYGON_AMOY_RPC_URL || "https://rpc-amoy.polygon.technology/";
+    this.rpcUrl = process.env.POLYGON_AMOY_RPC_URL || "https://polygon-amoy.drpc.org";
     this.chainId = addressRegistry.chainId || 80002;
     this.isPolling = false;
   }

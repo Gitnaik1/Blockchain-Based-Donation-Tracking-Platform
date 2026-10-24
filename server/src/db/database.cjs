@@ -568,6 +568,42 @@ function initDatabase() {
     );
   }
 
+  // Phase 2 Seed: Projects (if empty)
+  const projectCount = db.prepare("SELECT COUNT(*) AS count FROM projects").get().count;
+  if (projectCount === 0) {
+    const insertProject = db.prepare(`
+      INSERT INTO projects (id, ngo_id, name, description, wallet, target_inr, allocated_inr, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+    `);
+    insertProject.run(
+      "proj-1",
+      "ngo-1",
+      "Clean Water Initiative",
+      "Borewell installation in drought-hit village cluster.",
+      "0x8F1C9902bC297F2B773b06bB22C4B1842A4D11D8",
+      450000,
+      450000
+    );
+    insertProject.run(
+      "proj-2",
+      "ngo-2",
+      "Education for All",
+      "Digital lab equipment & high-speed satellite connectivity.",
+      "0x2D4aB9185aC9204910e527027167520e5436814E",
+      800000,
+      800000
+    );
+    insertProject.run(
+      "proj-3",
+      "ngo-3",
+      "Healthcare Access Program",
+      "Mobile health dispensary & vaccination cold-chain storage.",
+      "0x91F5B612E0987c320dE51A186B1095d315682C89",
+      1200000,
+      1200000
+    );
+  }
+
   // Phase 2 Seed: Users, Memberships & Governance Policies
   const userCount = db.prepare("SELECT COUNT(*) AS count FROM users").get().count;
   if (userCount === 0) {
