@@ -75,11 +75,28 @@ const IMPACT_MILESTONES = [
   },
 ];
 
-export const DonorDashboard = ({ onOpenDonate, initialTab = "history" }) => {
+const STORAGE_KEY_MY_DONATIONS = "trustdonate_my_donations_v1";
+
+const getInitialDonations = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_MY_DONATIONS);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load saved donor donations:", e);
+  }
+  return [...MY_DONATIONS];
+};
+
+export const DonorDashboard = ({ onOpenDonate, initialTab = "history", serviceDonations }) => {
   const { currentUser } = useAuth();
   const { account, connectWallet } = useWeb3();
   const [activeTab, setActiveTab] = useState(initialTab || "history");
-  const [donations, setDonations] = useState(MY_DONATIONS);
+  const [donations, setDonations] = useState(getInitialDonations);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Claim Guest Donation state
@@ -98,6 +115,94 @@ export const DonorDashboard = ({ onOpenDonate, initialTab = "history" }) => {
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+
+  // Synchronize with donationService and external donations
+  useEffect(() => {
+    const syncWithService = (serviceDons) => {
+      if (!Array.isArray(serviceDons) || serviceDons.length === 0) return;
+
+      const activeWallet = (account || currentUser?.wallet || "").toLowerCase();
+      const activeName = (currentUser?.name || "").toLowerCase();
+
+      // Find any donations that were made by this donor or newly completed in this session
+      const matched = serviceDons.filter((d) => {
+        if (!d) return false;
+        if (d.isHistoricalFixture) {
+          const dWallet = (d.wallet || d.donorWallet || "").toLowerCase();
+          return activeWallet && dWallet === activeWallet;
+        }
+
+        const dWallet = (d.wallet || d.donorWallet || "").toLowerCase();
+        const dDonor = (d.donor || "").toLowerCase();
+        const matchesWallet = Boolean(activeWallet && dWallet && dWallet === activeWallet);
+        const matchesName = Boolean(activeName && dDonor && dDonor.includes(activeName));
+        const isFresh = Boolean(d.isNew);
+
+        return matchesWallet || matchesName || isFresh;
+      });
+
+      if (matched.length === 0) return;
+
+      setDonations((prev) => {
+        let hasChanges = false;
+        const currentList = [...prev];
+
+        for (const item of matched) {
+          const itemHash = (item.hash || "").toLowerCase();
+          const itemReceipt = (item.taxReceiptNo || "").toLowerCase();
+
+          const alreadyExists = currentList.some((existing) => {
+            const exHash = (existing.hash || "").toLowerCase();
+            const exReceipt = (existing.taxReceiptNo || "").toLowerCase();
+            return (itemHash && exHash === itemHash) || (itemReceipt && exReceipt === itemReceipt);
+          });
+
+          if (!alreadyExists) {
+            const newItem = {
+              id: item.id || `don-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+              ngoName: item.ngoName || item.recipient?.replace("Donation to ", "") || "Asha Foundation",
+              project: item.project || "General Community Initiative",
+              amountCrypto: item.amountCrypto || `${item.amount || 0} ${item.token || "POL"}`,
+              amountInr: item.amountInr || 0,
+              token: item.token || "POL",
+              date: item.date || new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+              hash: item.hash || "0x...",
+              status: item.status || "Confirmed on Amoy",
+              taxReceiptNo: item.taxReceiptNo || `REC-AMOY-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+              donorWallet: item.donorWallet || item.wallet || activeWallet,
+            };
+            currentList.unshift(newItem);
+            hasChanges = true;
+          }
+        }
+
+        if (hasChanges) {
+          try {
+            localStorage.setItem(STORAGE_KEY_MY_DONATIONS, JSON.stringify(currentList));
+          } catch {}
+          return currentList;
+        }
+
+        return prev;
+      });
+    };
+
+    // Immediate sync from current donationService records
+    syncWithService(donationService.getDonations());
+
+    if (serviceDonations) {
+      syncWithService(serviceDonations);
+    }
+
+    // Subscribe to live donation additions
+    const unsubscribe = donationService.subscribe((state) => {
+      if (state.donations) {
+        syncWithService(state.donations);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [account, currentUser?.wallet, currentUser?.name, serviceDonations]);
 
   const totalInr = donations.reduce((sum, d) => sum + (d.amountInr || 0), 0);
 
@@ -130,26 +235,36 @@ export const DonorDashboard = ({ onOpenDonate, initialTab = "history" }) => {
       return;
     }
 
-    // Search existing transactions in donationService
+    // Search existing transactions or recorded donations in donationService
     const liveTxs = donationService.getTransactions();
-    const match = liveTxs.find(
-      (t) => t.hash.toLowerCase() === query.toLowerCase() || (t.id && t.id.toLowerCase() === query.toLowerCase())
+    const liveDons = donationService.getDonations();
+    const matchTx = liveTxs.find(
+      (t) => (t.hash && t.hash.toLowerCase() === query.toLowerCase()) || (t.id && t.id.toLowerCase() === query.toLowerCase())
     );
+    const matchDon = liveDons.find(
+      (d) => (d.hash && d.hash.toLowerCase() === query.toLowerCase()) || (d.taxReceiptNo && d.taxReceiptNo.toLowerCase() === query.toLowerCase())
+    );
+    const match = matchDon || matchTx;
 
     const newLinked = {
       id: `don-claimed-${Date.now()}`,
-      ngoName: match?.recipient?.replace("Donation to ", "") || "Asha Foundation",
-      project: "General Community Grant",
-      amountCrypto: match ? `${match.amount} ${match.token}` : "100.00 USDC",
+      ngoName: match?.ngoName || match?.recipient?.replace("Donation to ", "") || "Asha Foundation",
+      project: match?.project || "General Community Grant",
+      amountCrypto: match ? (match.amountCrypto || `${match.amount} ${match.token}`) : "100.00 USDC",
       amountInr: match?.amountInr || 8500,
       token: match?.token || "USDC",
-      date: "Recently Linked",
+      date: match?.date || "Recently Linked",
       hash: match?.hash || query,
-      status: "Confirmed on Amoy",
-      taxReceiptNo: `REC-AMOY-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      status: match?.status || "Confirmed on Amoy",
+      taxReceiptNo: match?.taxReceiptNo || `REC-AMOY-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      donorWallet: account || currentUser?.wallet,
     };
 
-    setDonations([newLinked, ...donations]);
+    const nextList = [newLinked, ...donations];
+    setDonations(nextList);
+    try {
+      localStorage.setItem(STORAGE_KEY_MY_DONATIONS, JSON.stringify(nextList));
+    } catch (err) {}
     setClaimSuccess(`Successfully linked donation (${shortenTxHash(newLinked.hash)}) to your 80G tax summary!`);
     setClaimInput("");
   };
@@ -322,7 +437,14 @@ export const DonorDashboard = ({ onOpenDonate, initialTab = "history" }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
-                  {filtered.map((item) => (
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-[#64748B]">
+                        No verified donations found. Make a new contribution or link a past receipt above.
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((item) => (
                     <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex flex-col">
