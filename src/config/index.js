@@ -12,7 +12,12 @@ export const SUPPORTED_NETWORKS = {
     chainIdDec: AMOY_CHAIN_ID_DEC,
     name: "Polygon Amoy Testnet",
     shortName: "Amoy",
-    rpcUrl: "https://rpc-amoy.polygon.technology/",
+    rpcUrl: "https://polygon-amoy.drpc.org",
+    rpcUrls: [
+      "https://polygon-amoy.drpc.org",
+      "https://polygon-amoy-bor-rpc.publicnode.com",
+      "https://rpc-amoy.polygon.technology/",
+    ],
     explorerUrl: "https://amoy.polygonscan.com",
     nativeCurrency: {
       name: "POL",

@@ -219,3 +219,81 @@ export function resolveFallbackRoute(currentPath = "") {
   return "/";
 }
 
+/**
+ * Role-Specific Authorized Navigation Items & Workspaces
+ */
+export const ROLE_NAV_ITEMS = {
+  [ROLES.DONOR]: [
+    { label: "My Donations", badge: "80G", targetTab: "Donor Portal", donorSubTab: "history", path: "/donor/dashboard" },
+    { label: "Impact Milestones", targetTab: "Donor Portal", donorSubTab: "impact", path: "/donor/dashboard" },
+    { label: "Recurring Pledges", targetTab: "Donor Portal", donorSubTab: "recurring", path: "/donor/dashboard" },
+    { label: "Profile & Wallet", targetTab: "Donor Portal", donorSubTab: "profile", path: "/donor/profile" },
+    { label: "Tax & Settings", targetTab: "Donor Portal", donorSubTab: "settings", path: "/donor/settings" },
+    { label: "Public Ledger", badge: "Amoy", targetTab: "Transactions" },
+    { label: "Notifications", targetTab: "Notifications" },
+    { label: "Explore Causes", isExternalLink: true, path: "/" },
+  ],
+  [ROLES.FINANCE_OFFICER]: [
+    { label: "Finance Workspace", badge: "Treasury", targetTab: "Finance", path: "/finance" },
+    { label: "Approvals", badge: "Multi-Sig", targetTab: "Approvals", path: "/approvals" },
+    { label: "Fund Allocation", targetTab: "Fund Allocation" },
+    { label: "Transactions Ledger", targetTab: "Transactions" },
+    { label: "Documents & Vault", targetTab: "Documents" },
+    { label: "Risk Alerts", targetTab: "Risk Alerts", path: "/risk" },
+    { label: "Treasury Analytics", targetTab: "Analytics" },
+    { label: "Notifications", targetTab: "Notifications" },
+  ],
+  [ROLES.PROJECT_MANAGER]: [
+    { label: "Projects & Milestones", badge: "Field", targetTab: "Projects", path: "/projects" },
+    { label: "Deliverables & Proofs", badge: "IPFS", targetTab: "Documents" },
+    { label: "Impact Reports", targetTab: "Impact Reports" },
+    { label: "Fund Allocation", targetTab: "Fund Allocation" },
+    { label: "Notifications", targetTab: "Notifications" },
+  ],
+  [ROLES.AUDITOR]: [
+    { label: "Auditor Portal", badge: "Audits", targetTab: "Auditor", path: "/auditor" },
+    { label: "Compliance Vault", badge: "IPFS", targetTab: "Documents" },
+    { label: "Impact Reports", targetTab: "Impact Reports" },
+    { label: "On-Chain Ledger", badge: "Ledger", targetTab: "Transactions" },
+    { label: "Risk Alerts", targetTab: "Risk Alerts", path: "/risk" },
+    { label: "Notifications", targetTab: "Notifications" },
+  ],
+  [ROLES.SUPER_ADMIN]: [
+    { label: "Super Admin", badge: "Gov", targetTab: "Super Admin", path: "/admin" },
+    { label: "Auditor Portal", targetTab: "Auditor", path: "/auditor" },
+    { label: "Risk Alerts", badge: "Alerts", targetTab: "Risk Alerts", path: "/risk" },
+    { label: "Platform Analytics", targetTab: "Analytics" },
+    { label: "Documents & IPFS", targetTab: "Documents" },
+    { label: "Transactions", targetTab: "Transactions" },
+    { label: "Notifications", targetTab: "Notifications" },
+    { label: "Settings", targetTab: "Settings" },
+  ],
+  [ROLES.VIEWER]: [
+    { label: "Public Ledger", badge: "Live", targetTab: "Transactions" },
+    { label: "Impact Reports", targetTab: "Impact Reports" },
+    { label: "Analytics", targetTab: "Analytics" },
+    { label: "Explore NGOs", isExternalLink: true, path: "/" },
+  ],
+  [ROLES.NGO_ADMIN]: [
+    { label: "Dashboard", targetTab: "Dashboard", path: "/ngo/dashboard" },
+    { label: "Approvals", badge: "Multi-Sig", targetTab: "Approvals", path: "/approvals" },
+    { label: "Finance", targetTab: "Finance", path: "/finance" },
+    { label: "Projects", targetTab: "Projects", path: "/projects" },
+    { label: "Fund Allocation", targetTab: "Fund Allocation" },
+    { label: "Team Management", badge: "Staff", targetTab: "Team" },
+    { label: "Documents & Vault", targetTab: "Documents" },
+    { label: "Donations Ledger", targetTab: "Donations" },
+    { label: "Donor Directory", targetTab: "Donors" },
+    { label: "Transactions", targetTab: "Transactions" },
+    { label: "Impact Reports", targetTab: "Impact Reports" },
+    { label: "Analytics", targetTab: "Analytics" },
+    { label: "Risk Alerts", targetTab: "Risk Alerts", path: "/risk" },
+    { label: "Notifications", targetTab: "Notifications" },
+    { label: "NGO Settings", targetTab: "Settings" },
+  ],
+};
+
+export function getRoleNavItems(role) {
+  return ROLE_NAV_ITEMS[role] || ROLE_NAV_ITEMS[ROLES.NGO_ADMIN];
+}
+

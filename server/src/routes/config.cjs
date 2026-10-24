@@ -40,7 +40,11 @@ router.get("/config", (req, res) => {
           isNative: false,
         },
       ],
-      rpcUrls: ["https://rpc-amoy.polygon.technology/"],
+      rpcUrls: [
+        "https://polygon-amoy.drpc.org",
+        "https://polygon-amoy-bor-rpc.publicnode.com",
+        "https://rpc-amoy.polygon.technology/",
+      ],
       blockExplorer: "https://amoy.polygonscan.com/",
     },
   });

@@ -73,6 +73,7 @@ export const NgoLogin = ({ onLoginSuccess, onBackToPublic }) => {
         wallet: activeAccount,
         signature,
         nonce: challenge.nonce,
+        message: challenge.message,
         isDemo,
       });
 

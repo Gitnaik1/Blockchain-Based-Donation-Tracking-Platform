@@ -6,6 +6,7 @@ import {
   hasPermission,
   getDefaultDashboardForRole,
   resolveFallbackRoute,
+  getRoleNavItems,
 } from "../src/config/roles.js";
 
 describe("TrustDonate Frontend Navigation & Role-Based Access Guarding", () => {
@@ -54,5 +55,56 @@ describe("TrustDonate Frontend Navigation & Role-Based Access Guarding", () => {
     assert.equal(hasPermission(ROLES.PROJECT_MANAGER, PERMISSIONS.PROJECT_CREATE), true);
     assert.equal(hasPermission(ROLES.NGO_ADMIN, PERMISSIONS.PROJECT_CREATE), true);
     assert.equal(hasPermission(ROLES.AUDITOR, PERMISSIONS.PROJECT_CREATE), false);
+  });
+
+  it("enforces strict role-segregated navigation items in sidebar", () => {
+    // 1. Donor nav items
+    const donorItems = getRoleNavItems(ROLES.DONOR);
+    const donorLabels = donorItems.map((i) => i.label);
+    assert.ok(donorLabels.includes("My Donations"));
+    assert.ok(donorLabels.includes("Impact Milestones"));
+    assert.ok(donorLabels.includes("Recurring Pledges"));
+    assert.ok(donorLabels.includes("Profile & Wallet"));
+    assert.ok(donorLabels.includes("Tax & Settings"));
+
+    // Donor must NEVER have NGO internal governance tabs
+    assert.equal(donorLabels.includes("Finance"), false);
+    assert.equal(donorLabels.includes("Approvals"), false);
+    assert.equal(donorLabels.includes("Fund Allocation"), false);
+    assert.equal(donorLabels.includes("Team Management"), false);
+    assert.equal(donorLabels.includes("Auditor Portal"), false);
+    assert.equal(donorLabels.includes("Risk Alerts"), false);
+
+    // 2. Finance Officer nav items
+    const financeItems = getRoleNavItems(ROLES.FINANCE_OFFICER);
+    const financeLabels = financeItems.map((i) => i.label);
+    assert.ok(financeLabels.includes("Finance Workspace"));
+    assert.ok(financeLabels.includes("Approvals"));
+    assert.ok(financeLabels.includes("Fund Allocation"));
+    assert.equal(financeLabels.includes("Team Management"), false);
+    assert.equal(financeLabels.includes("My Donations"), false);
+
+    // 3. Auditor nav items
+    const auditorItems = getRoleNavItems(ROLES.AUDITOR);
+    const auditorLabels = auditorItems.map((i) => i.label);
+    assert.ok(auditorLabels.includes("Auditor Portal"));
+    assert.ok(auditorLabels.includes("Compliance Vault"));
+    assert.equal(auditorLabels.includes("Finance Workspace"), false);
+    assert.equal(auditorLabels.includes("Team Management"), false);
+
+    // 4. Project Manager nav items
+    const pmItems = getRoleNavItems(ROLES.PROJECT_MANAGER);
+    const pmLabels = pmItems.map((i) => i.label);
+    assert.ok(pmLabels.includes("Projects & Milestones"));
+    assert.ok(pmLabels.includes("Deliverables & Proofs"));
+    assert.equal(pmLabels.includes("Finance Workspace"), false);
+    assert.equal(pmLabels.includes("Approvals"), false);
+
+    // 5. Super Admin nav items
+    const adminItems = getRoleNavItems(ROLES.SUPER_ADMIN);
+    const adminLabels = adminItems.map((i) => i.label);
+    assert.ok(adminLabels.includes("Super Admin"));
+    assert.ok(adminLabels.includes("Auditor Portal"));
+    assert.ok(adminLabels.includes("Risk Alerts"));
   });
 });

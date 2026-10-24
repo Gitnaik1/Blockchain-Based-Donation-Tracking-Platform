@@ -78,7 +78,7 @@ class Web3Service {
                 chainId: AMOY_CHAIN_ID_HEX,
                 chainName: amoyConfig.name,
                 nativeCurrency: amoyConfig.nativeCurrency,
-                rpcUrls: [amoyConfig.rpcUrl],
+                rpcUrls: amoyConfig.rpcUrls || [amoyConfig.rpcUrl],
                 blockExplorerUrls: [amoyConfig.explorerUrl],
               },
             ],
@@ -89,6 +89,33 @@ class Web3Service {
         }
       }
       return { success: false, error: switchError.message || "Failed to switch network" };
+    }
+  }
+
+  /**
+   * Prompts MetaMask to update its active RPC endpoints to high-speed alternatives (DRPC/PublicNode).
+   */
+  async updateAmoyRpc() {
+    if (!this.isWalletAvailable()) {
+      return { success: false, error: "No Ethereum wallet detected." };
+    }
+    const amoyConfig = SUPPORTED_NETWORKS[AMOY_CHAIN_ID_DEC];
+    try {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: AMOY_CHAIN_ID_HEX,
+            chainName: amoyConfig.name,
+            nativeCurrency: amoyConfig.nativeCurrency,
+            rpcUrls: amoyConfig.rpcUrls || [amoyConfig.rpcUrl],
+            blockExplorerUrls: [amoyConfig.explorerUrl],
+          },
+        ],
+      });
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || "Failed to update RPC in MetaMask" };
     }
   }
 
