@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Users,
   Search,
@@ -15,6 +15,7 @@ import {
   Info,
 } from "lucide-react";
 import { formatInr } from "../../services/utils/tokenMath";
+import { donationService } from "../../services/donationService";
 
 const INITIAL_DONORS = [
   {
@@ -80,13 +81,57 @@ const INITIAL_DONORS = [
 ];
 
 export const NgoDonors = () => {
-  const [donors] = useState(INITIAL_DONORS);
+  const [donors, setDonors] = useState(INITIAL_DONORS);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDonor, setSelectedDonor] = useState(null);
   const [messageSent, setMessageSent] = useState(false);
   const [messageText, setMessageText] = useState(
     "Dear Patron, thanks to your support, our Clean Water Initiative has successfully completed drilling 4 deep-water borewells in Vidarbha!"
   );
+
+  useEffect(() => {
+    const updateDonors = () => {
+      const allDons = donationService.getDonations();
+      if (!allDons || allDons.length === 0) return;
+
+      const liveDonations = allDons.filter((d) => !d.isHistoricalFixture || d.isNew);
+      if (liveDonations.length === 0) return;
+
+      setDonors((prev) => {
+        const nextList = [...prev];
+        for (const d of liveDonations) {
+          const donorName = d.donor?.replace(/^Donor \((.*?)\)$/, "$1") || "Verified Donor";
+          const donorWallet = d.donorWallet || d.wallet || "";
+          const found = nextList.find(
+            (u) =>
+              (donorWallet && u.wallet.toLowerCase() === donorWallet.toLowerCase()) ||
+              (donorName && u.name.toLowerCase() === donorName.toLowerCase())
+          );
+          if (found) {
+            found.lastDonated = "Just now";
+          } else {
+            nextList.unshift({
+              id: `don-${d.id || Date.now()}`,
+              name: donorName,
+              wallet: donorWallet || "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1",
+              tier: (d.amountInr || 0) > 100000 ? "Platinum" : (d.amountInr || 0) > 50000 ? "Gold" : "Silver",
+              lifetimeInr: d.amountInr || 25000,
+              lifetimeCrypto: d.amountCrypto || `${d.amount} ${d.token}`,
+              donationsCount: 1,
+              preferredCause: d.project || "Community Initiative",
+              lastDonated: "Just now",
+              avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=80&q=80",
+            });
+          }
+        }
+        return nextList;
+      });
+    };
+
+    updateDonors();
+    const unsubscribe = donationService.subscribe(() => updateDonors());
+    return () => unsubscribe();
+  }, []);
 
   const handleSendMessage = (e) => {
     e.preventDefault();

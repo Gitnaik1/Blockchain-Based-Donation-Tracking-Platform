@@ -89,4 +89,37 @@ describe("DonationService authoritative ledger & reactivity", () => {
     assert.ok(metrics.donationsCount > 0, "Donations count should be positive");
     assert.ok(typeof metrics.donorsCount === "number");
   });
+
+  it("emits live subscriber updates with structured donor donation attributes", () => {
+    let notifiedState = null;
+    const unsub = donationService.subscribe((state) => {
+      notifiedState = state;
+    });
+
+    const liveHash = "0x777788889999aaaabbbbccccddddeeeeffff0000111122223333444455556666";
+    const customReceipt = "REC-AMOY-2026-9999";
+    const liveDonorWallet = "0x3A2190B74dE865103AbF992E3c467B1028919a3B";
+
+    const record = donationService.addDonation({
+      txHash: liveHash,
+      amount: "250",
+      token: "POL",
+      ngoId: "ngo-1",
+      ngoName: "Asha Foundation",
+      project: "Clean Water Initiative",
+      taxReceiptNo: customReceipt,
+      donorWallet: liveDonorWallet,
+      donorName: "Meera Subramanian",
+      status: "Confirmed",
+    });
+
+    unsub();
+
+    assert.ok(notifiedState, "Subscriber should be notified");
+    assert.strictEqual(record.taxReceiptNo, customReceipt);
+    assert.strictEqual(record.ngoName, "Asha Foundation");
+    assert.strictEqual(record.donorWallet, liveDonorWallet);
+    assert.strictEqual(record.amountInr, 25000);
+    assert.strictEqual(notifiedState.donations[0].hash, liveHash);
+  });
 });

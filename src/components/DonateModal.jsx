@@ -16,6 +16,7 @@ import {
   LogIn,
 } from "lucide-react";
 import confetti from "canvas-confetti";
+import { useAuth } from "../context/AuthContext.jsx";
 import { useWeb3 } from "../context/Web3Context";
 import { useRouter } from "../context/RouterContext.jsx";
 import { web3Service } from "../services/web3Service";
@@ -39,6 +40,7 @@ export const DonateModal = ({
     switchOrAddAmoyNetwork,
   } = useWeb3();
 
+  const { currentUser } = useAuth();
   const { navigate } = useRouter();
 
   const [activeNgoId, setActiveNgoId] = useState(selectedNgo?.id || ngos[0]?.id);
@@ -83,15 +85,15 @@ export const DonateModal = ({
   const handleConfirmAndSign = async (forceDemo = false) => {
     setErrorMessage(null);
 
-    // If wallet not connected, connect first
-    let activeAccount = account;
+    // If wallet not connected, connect first or fallback to logged in user's wallet
+    let activeAccount = account || currentUser?.wallet;
     if (!activeAccount) {
       const connRes = await connectWallet();
-      if (!connRes.success) {
+      if (!connRes.success && !forceDemo && !isDemo) {
         setErrorMessage("Wallet connection is required to sign the on-chain donation.");
         return;
       }
-      activeAccount = connRes.account;
+      activeAccount = connRes.account || "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1";
     }
 
     if (!forceDemo && isWrongNetwork) {
@@ -119,6 +121,13 @@ export const DonateModal = ({
       // Short delay for on-chain block mining simulation / confirmation
       setTimeout(() => {
         const generatedTaxReceipt = `REC-AMOY-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const donorDisplayName = currentUser?.name
+          ? currentUser.name
+          : activeAccount
+          ? shortenAddress(activeAccount)
+          : "Verified Donor";
+        const donorFullWallet = activeAccount || currentUser?.wallet || "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1";
+
         const newTx = {
           id: `tx-${Date.now()}`,
           ngoId: currentNgo.id,
@@ -136,10 +145,10 @@ export const DonateModal = ({
           network: "Polygon Amoy Testnet",
           taxReceiptNo: generatedTaxReceipt,
           status: "Confirmed",
-          donor: activeAccount ? shortenAddress(activeAccount) : "0x7a8c...89F1",
-          fullWallet: activeAccount || "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1",
+          donor: donorDisplayName,
+          fullWallet: donorFullWallet,
           isSimulated: txResult.isSimulated,
-          isGuest: true,
+          isGuest: !currentUser,
         };
 
         if (onDonationComplete) {

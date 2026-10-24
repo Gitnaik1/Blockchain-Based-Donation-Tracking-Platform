@@ -77,16 +77,45 @@ export function AppContent() {
   };
 
   const handleDonationComplete = (newTx, ngoId, amount) => {
+    const finalDonorWallet = (newTx.fullWallet && newTx.fullWallet !== "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1")
+      ? newTx.fullWallet
+      : (account || currentUser?.wallet || newTx.fullWallet || "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1");
+
+    const finalDonorName = currentUser?.name
+      || (newTx.donor && !newTx.donor.startsWith("0x7a8c") ? newTx.donor : (account ? shortenAddress(account) : "Verified Donor"));
+
     donationService.addDonation({
       txHash: newTx.hash,
       amount: amount,
       token: newTx.token,
       ngoId: ngoId,
-      donorWallet: newTx.fullWallet,
-      donorName: newTx.donor,
+      ngoName: newTx.ngoName,
+      project: newTx.project || newTx.ngoName,
+      taxReceiptNo: newTx.taxReceiptNo,
+      donorWallet: finalDonorWallet,
+      donorName: finalDonorName,
       status: "Confirmed",
       isSimulated: newTx.isSimulated || false,
     });
+
+    // Also record in backend API if available
+    try {
+      fetch(`${APP_CONFIG.apiBaseUrl}/donations/record`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          txHash: newTx.hash,
+          ngoId: ngoId,
+          donorAddress: newTx.fullWallet,
+          donorName: newTx.donor,
+          tokenSymbol: newTx.token,
+          amount: String(amount),
+        }),
+      }).catch((err) => {
+        console.warn("Could not sync donation to backend API:", err);
+      });
+    } catch {}
   };
 
   const handleExploreClick = () => {

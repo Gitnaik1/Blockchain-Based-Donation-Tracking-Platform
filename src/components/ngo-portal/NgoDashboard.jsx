@@ -638,7 +638,7 @@ export const NgoDashboard = ({
           ) : activeTab === "Notifications" ? (
             <NotificationCenter onNavigateTab={handleTabChange} />
           ) : activeTab === "Donor Portal" ? (
-            <DonorDashboard onOpenDonate={onOpenDonate} initialTab={currentDonorTab} />
+            <DonorDashboard onOpenDonate={onOpenDonate} initialTab={currentDonorTab} serviceDonations={ngoDonations} />
           ) : activeTab === "Fund Allocation" ? (
             <FundAllocation onBackToDashboard={() => handleTabChange("Dashboard")} />
           ) : activeTab === "Projects" ? (
@@ -659,7 +659,7 @@ export const NgoDashboard = ({
             <NgoSettings />
           ) : (
             activeRole === ROLES.DONOR ? (
-              <DonorDashboard onOpenDonate={onOpenDonate} initialTab={currentDonorTab} />
+              <DonorDashboard onOpenDonate={onOpenDonate} initialTab={currentDonorTab} serviceDonations={ngoDonations} />
             ) : activeRole === ROLES.SUPER_ADMIN ? (
               <SuperAdminDashboard />
             ) : activeRole === ROLES.AUDITOR ? (

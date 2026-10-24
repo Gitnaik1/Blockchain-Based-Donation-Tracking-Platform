@@ -98,7 +98,7 @@ class DonationService {
   /**
    * Adds a new donation, ensuring strict deduplication against existing tx hashes.
    */
-  addDonation({ txHash, amount, token, ngoId, donorWallet, donorName = "Patron", status = "Confirmed", isSimulated = false }) {
+  addDonation({ txHash, amount, token, ngoId, ngoName, project, taxReceiptNo, donorWallet, donorName = "Patron", status = "Confirmed", isSimulated = false }) {
     const cleanHash = txHash.toLowerCase();
 
     // Check for duplicate in donations
@@ -111,7 +111,9 @@ class DonationService {
     const inrValue = Math.round(numAmount * (tokenMeta.exchangeRateInr || 100));
 
     const targetNgo = this.ngos.find((n) => n.id === ngoId) || this.ngos[0];
-    const projectName = targetNgo ? targetNgo.name : "Verified Cause";
+    const assignedNgoName = ngoName || (targetNgo ? targetNgo.name : "Asha Foundation");
+    const projectName = project || assignedNgoName;
+    const finalReceiptNo = taxReceiptNo || `REC-AMOY-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const formattedDonor = donorWallet
       ? donorWallet.length === 42
@@ -121,24 +123,27 @@ class DonationService {
 
     const donationRecord = {
       id: `don-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      ngoName: assignedNgoName,
+      project: projectName,
       donor: donorName.startsWith("0x") ? `Donor (${shortenAddress(donorName)})` : donorName,
       wallet: donorWallet || "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1",
+      donorWallet: donorWallet || "0x7a8c312B4C56aDeF80B91244019aA2C81B0989F1",
       amountInr: inrValue,
       amountCrypto: `${numAmount.toFixed(2)} ${token}`,
       token: token,
-      project: projectName,
-      date: "Just now",
+      date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
       isNew: true, // Mark NEW only for freshly detected donations in this session
       isSimulated,
       hash: txHash,
       status: status,
-      taxReceiptNo: `REC-AMOY-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      taxReceiptNo: finalReceiptNo,
     };
 
     if (existingIndex >= 0) {
       // Update existing record (e.g. status change from Pending to Confirmed) without duplicating
       this.donations[existingIndex] = {
         ...this.donations[existingIndex],
+        ...donationRecord,
         status,
       };
     } else {
@@ -153,8 +158,8 @@ class DonationService {
     const txRecord = {
       id: `tx-${Date.now()}`,
       ngoId: targetNgo.id,
-      ngoName: targetNgo.name,
-      recipient: `Donation to ${targetNgo.name}`,
+      ngoName: assignedNgoName,
+      recipient: `Donation to ${assignedNgoName}`,
       hash: txHash,
       shortHash: shortenTxHash(txHash),
       amount: numAmount.toFixed(2),
